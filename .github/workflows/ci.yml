@@ -8,6 +8,20 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: careerid
+          POSTGRES_PASSWORD: careerid_dev
+          POSTGRES_DB: careerid
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U careerid"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
 

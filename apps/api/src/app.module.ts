@@ -1,5 +1,7 @@
 import { Module } from "@nestjs/common";
+import { ThrottlerModule } from "@nestjs/throttler";
 import { HealthModule } from "./modules/health/health.module";
+import { AuthModule } from "./modules/auth/auth.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -8,6 +10,22 @@ import { PrismaModule } from "./prisma/prisma.module";
  * domain events — never via another module's repositories (boundary rule T4).
  */
 @Module({
-  imports: [PrismaModule, HealthModule],
+  imports: [
+    ThrottlerModule.forRootAsync({
+      // Async so limits are read at app init (tests tune them per instance).
+      useFactory: () => ({
+        throttlers: [
+          {
+            name: "default",
+            ttl: 60_000,
+            limit: Number(process.env.THROTTLE_DEFAULT_LIMIT ?? 100),
+          },
+        ],
+      }),
+    }),
+    PrismaModule,
+    HealthModule,
+    AuthModule,
+  ],
 })
 export class AppModule {}

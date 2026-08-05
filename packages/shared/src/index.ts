@@ -132,3 +132,37 @@ export const CountryCodeSchema = z
 export const CefrLevelSchema = z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]);
 
 export const LanguageSourceSchema = z.enum(["SELF_DECLARED", "CERTIFIED"]);
+
+// ---------- Auth DTOs (API_SPEC /auth) ----------
+
+export const EmailSchema = z.string().trim().toLowerCase().email().max(320);
+
+/** Minimum length only — strength estimation and breach checks live server-side. */
+export const PasswordSchema = z.string().min(10).max(200);
+
+export const RegisterSchema = z.object({
+  email: EmailSchema,
+  password: PasswordSchema,
+  locale: LocaleSchema.optional(),
+});
+export type RegisterDto = z.infer<typeof RegisterSchema>;
+
+export const LoginSchema = z.object({
+  email: EmailSchema,
+  password: z.string().min(1).max(200),
+});
+export type LoginDto = z.infer<typeof LoginSchema>;
+
+export const TokenSchema = z.string().min(20).max(200);
+
+export const VerifyEmailSchema = z.object({ token: TokenSchema });
+export type VerifyEmailDto = z.infer<typeof VerifyEmailSchema>;
+
+export const ForgotPasswordSchema = z.object({ email: EmailSchema });
+export type ForgotPasswordDto = z.infer<typeof ForgotPasswordSchema>;
+
+export const ResetPasswordSchema = z.object({
+  token: TokenSchema,
+  newPassword: PasswordSchema,
+});
+export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;
