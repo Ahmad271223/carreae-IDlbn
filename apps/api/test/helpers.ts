@@ -3,6 +3,7 @@ import { Test } from "@nestjs/testing";
 import { PrismaService } from "../src/prisma/prisma.service";
 import { configureApp } from "../src/app.setup";
 import { Mailer } from "../src/modules/mail/mailer";
+import { SCANNER, Scanner, type ScanVerdict } from "../src/modules/documents/scanner";
 
 export interface CapturedMail {
   to: string;
@@ -23,6 +24,15 @@ export class FakeMailer extends Mailer {
   }
 }
 
+/** Deterministic scanner double: content containing "EICAR" is infected. */
+export class FakeScanner extends Scanner {
+  async scan(buffer: Buffer): Promise<ScanVerdict> {
+    return buffer.toString("latin1").includes("EICAR")
+      ? { status: "INFECTED", signature: "Test.EICAR" }
+      : { status: "CLEAN" };
+  }
+}
+
 export async function createTestApp(): Promise<{
   app: INestApplication;
   mailer: FakeMailer;
@@ -34,6 +44,8 @@ export async function createTestApp(): Promise<{
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(Mailer)
     .useValue(mailer)
+    .overrideProvider(SCANNER)
+    .useValue(new FakeScanner())
     .compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
@@ -44,6 +56,7 @@ export async function createTestApp(): Promise<{
 /** Deletes all rows in FK-safe order — full isolation between test files. */
 export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.$transaction([
+    prisma.document.deleteMany(),
     prisma.oauthState.deleteMany(),
     prisma.actionToken.deleteMany(),
     prisma.session.deleteMany(),

@@ -20,8 +20,12 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
   snapshot hash, auto-reset on edit) — first §65 test subset green
 
 ## Phase 2 — Documents & credentials
-- **2.1** Storage abstraction + quarantine upload + presigned flows (MinIO dev)
-- **2.2** Scan pipeline (ClamAV, MIME sniffing, limits, encryption) + wallet UI
+- **2.1** ✅ Storage abstraction + quarantine upload + presigned flows (MinIO dev)
+- **2.2** ✅* Scan pipeline: ClamAV (clamd INSTREAM, fail-closed when unconfigured),
+  magic-byte MIME sniffing, size limits, checksums, §65 upload-attack tests.
+  *Open remainders: scan moves from sync-in-request onto the BullMQ worker when the
+  render queue lands (3.4); wallet UI ships with the frontend milestone; object-level
+  encryption rides on bucket encryption for now (app-layer envelope later)
 - **2.3** Credential model: issue (internal harness), offer/accept, revoke/supersede,
   status history, Ed25519 signing + public verify endpoint
 - **2.4** §65 subset: document permissions, upload attacks, credential revocation

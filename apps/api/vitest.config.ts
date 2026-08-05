@@ -33,6 +33,11 @@ export default defineConfig({
       THROTTLE_DEFAULT_LIMIT: "10000",
       AUTH_THROTTLE_LIMIT: "1000",
       API_BASE_URL: "http://localhost:3001",
+      S3_ENDPOINT: process.env.S3_ENDPOINT ?? "http://localhost:9000",
+      S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? "careerid-dev",
+      S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? "careerid-dev-secret",
+      S3_BUCKET_QUARANTINE: "careerid-test-quarantine",
+      S3_BUCKET_DOCUMENTS: "careerid-test-documents",
       // Test-only key (32 bytes of 'a'); production keys come from a secret manager.
       ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
     },

@@ -333,6 +333,32 @@ export const LanguageUpdateSchema = z
   .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
 export type LanguageUpdateDto = z.infer<typeof LanguageUpdateSchema>;
 
+// ---------- Document wallet DTOs ----------
+
+export const DocumentCategorySchema = z.enum([
+  "CV",
+  "COVER_LETTER",
+  "CERTIFICATE",
+  "TRANSCRIPT",
+  "REFERENCE",
+  "PHOTO",
+  "OTHER",
+]);
+
+export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+
+export const UploadIntentSchema = z.object({
+  /** Display name only — storage keys never derive from user input. */
+  fileName: z
+    .string()
+    .trim()
+    .min(1)
+    .max(255)
+    .refine((name) => !/[/\\]/.test(name), "no path separators"),
+  category: DocumentCategorySchema,
+});
+export type UploadIntentDto = z.infer<typeof UploadIntentSchema>;
+
 // ---------- Verification DTOs (§5) ----------
 
 export const VerificationSubjectTypeSchema = z.enum([

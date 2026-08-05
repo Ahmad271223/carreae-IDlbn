@@ -5,8 +5,11 @@ export function generateToken(): string {
   return randomBytes(32).toString("base64url");
 }
 
-export function sha256Hex(value: string): string {
-  return createHash("sha256").update(value, "utf8").digest("hex");
+export function sha256Hex(value: string | Buffer): string {
+  const hash = createHash("sha256");
+  if (typeof value === "string") hash.update(value, "utf8");
+  else hash.update(value);
+  return hash.digest("hex");
 }
 
 export function constantTimeEqualHex(a: string, b: string): boolean {

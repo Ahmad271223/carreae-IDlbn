@@ -16,6 +16,8 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1103.0",
+    "@aws-sdk/s3-request-presigner": "^3.1103.0",
     "@careerid/branding": "workspace:*",
     "@careerid/shared": "workspace:*",
     "@nestjs/common": "^11.0.0",

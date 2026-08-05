@@ -141,6 +141,29 @@ enum OauthPurpose {
   LINK
 }
 
+enum DocumentCategory {
+  CV
+  COVER_LETTER
+  CERTIFICATE
+  TRANSCRIPT
+  REFERENCE
+  PHOTO
+  OTHER
+}
+
+enum DocumentOrigin {
+  USER_UPLOADED
+  PLATFORM_GENERATED
+  INSTITUTION_ISSUED
+}
+
+enum ScanStatus {
+  PENDING
+  CLEAN
+  INFECTED
+  FAILED
+}
+
 enum AuditActorType {
   USER
   ORG_MEMBER
@@ -180,6 +203,7 @@ model User {
   verificationRequests VerificationRequest[]      @relation("VerificationSubjectUser")
   notifications        Notification[]
   actionTokens         ActionToken[]
+  documents            Document[]
 
   @@map("users")
 }
@@ -465,6 +489,36 @@ model ActionToken {
 
   @@index([userId, type])
   @@map("action_tokens")
+}
+
+/// Wallet file metadata — the bytes live in object storage, never in the DB
+/// (DATABASE_SCHEMA §5). mimeType is the SNIFFED type; extensions are never
+/// trusted. Downloads are gated on scanStatus = CLEAN, fail-closed.
+model Document {
+  id               String           @id @default(uuid(7))
+  ownerUserId      String           @map("owner_user_id")
+  category         DocumentCategory
+  origin           DocumentOrigin
+  fileName         String           @map("file_name")
+  mimeType         String?          @map("mime_type")
+  sizeBytes        Int?             @map("size_bytes")
+  storageKey       String           @map("storage_key")
+  checksumSha256   String?          @map("checksum_sha256")
+  scanStatus       ScanStatus       @default(PENDING) @map("scan_status")
+  encryptionKeyRef String?          @map("encryption_key_ref")
+  language         String?
+  versionOfId      String?          @map("version_of_id")
+  versionNumber    Int              @default(1) @map("version_number")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+  deletedAt        DateTime?        @map("deleted_at")
+
+  owner     User       @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  versionOf Document?  @relation("DocumentVersions", fields: [versionOfId], references: [id])
+  versions  Document[] @relation("DocumentVersions")
+
+  @@index([ownerUserId, category])
+  @@map("documents")
 }
 
 /// CSRF/replay protection for the OIDC authorization-code flow. State is a
