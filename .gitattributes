@@ -1,0 +1,7 @@
+# Deterministic line endings across platforms (Windows dev machines included).
+# Matters later for golden-file PDF tests and content hashing.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.woff2 binary
+*.pdf binary
