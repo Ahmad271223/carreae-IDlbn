@@ -17,10 +17,18 @@ import { PrismaService } from "../../prisma/prisma.service";
 import { generateToken, sha256Hex } from "../../common/crypto";
 import { AuditService } from "../audit/audit.service";
 import { Mailer } from "../mail/mailer";
+import { LoginNotifyService } from "./login-notify.service";
+import { MfaService } from "./mfa.service";
 import { SessionService } from "./session.service";
 
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
+const MFA_CHALLENGE_TTL_MS = 5 * 60 * 1000;
+
+/** Password login either opens a session directly or requires an MFA step. */
+export type LoginResult =
+  | { kind: "session"; token: string; user: User }
+  | { kind: "mfa_required"; challengeToken: string };
 
 const ARGON2_OPTIONS = {
   type: argon2.argon2id,
@@ -40,6 +48,8 @@ export class AuthService {
     private readonly sessions: SessionService,
     private readonly audit: AuditService,
     private readonly mailer: Mailer,
+    private readonly mfa: MfaService,
+    private readonly loginNotify: LoginNotifyService,
   ) {}
 
   /**
@@ -117,7 +127,7 @@ export class AuthService {
   async login(
     dto: LoginDto,
     meta: { ip?: string; userAgent?: string },
-  ): Promise<{ token: string; user: User }> {
+  ): Promise<LoginResult> {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
@@ -140,7 +150,70 @@ export class AuthService {
       throw new UnauthorizedException({ code: "INVALID_CREDENTIALS" });
     }
 
-    const { token } = await this.sessions.create(user.id, {
+    // Password verified — with MFA enabled the session opens only after the
+    // second factor. The challenge token proves the completed password step.
+    if (user.mfaEnabled) {
+      const raw = generateToken();
+      await this.prisma.actionToken.create({
+        data: {
+          userId: user.id,
+          type: "MFA_CHALLENGE",
+          tokenHash: sha256Hex(raw),
+          expiresAt: new Date(Date.now() + MFA_CHALLENGE_TTL_MS),
+        },
+      });
+      return { kind: "mfa_required", challengeToken: raw };
+    }
+
+    const token = await this.openSession(user, meta, { mfa: false });
+    return { kind: "session", token, user };
+  }
+
+  /** Second login step: MFA challenge token + current TOTP code → session. */
+  async completeMfaChallenge(
+    challengeToken: string,
+    code: string,
+    meta: { ip?: string; userAgent?: string },
+  ): Promise<{ token: string; user: User }> {
+    const now = new Date();
+    const challenge = await this.prisma.actionToken.findUnique({
+      where: { tokenHash: sha256Hex(challengeToken) },
+      include: { user: true },
+    });
+    if (
+      !challenge ||
+      challenge.type !== "MFA_CHALLENGE" ||
+      challenge.usedAt ||
+      challenge.expiresAt <= now ||
+      challenge.user.status !== "ACTIVE"
+    ) {
+      throw new UnauthorizedException({ code: "MFA_CHALLENGE_INVALID" });
+    }
+    if (!(await this.mfa.verifyCode(challenge.userId, code))) {
+      await this.audit.append({
+        actorType: "SYSTEM",
+        action: "auth.mfa_failed",
+        targetType: "user",
+        targetId: challenge.userId,
+        ipCoarse: meta.ip ?? null,
+      });
+      throw new UnauthorizedException({ code: "MFA_CODE_INVALID" });
+    }
+    await this.prisma.actionToken.update({
+      where: { id: challenge.id },
+      data: { usedAt: now },
+    });
+    const token = await this.openSession(challenge.user, meta, { mfa: true });
+    return { token, user: challenge.user };
+  }
+
+  /** Shared by password, MFA and SSO logins: session + audit + device check. */
+  async openSession(
+    user: User,
+    meta: { ip?: string; userAgent?: string },
+    auditMeta: Record<string, unknown>,
+  ): Promise<string> {
+    const { token, session } = await this.sessions.create(user.id, {
       ip: meta.ip,
       userAgent: meta.userAgent,
     });
@@ -148,9 +221,11 @@ export class AuthService {
       actorType: "USER",
       actorId: user.id,
       action: "auth.login",
+      metadata: auditMeta,
       ipCoarse: meta.ip ?? null,
     });
-    return { token, user };
+    await this.loginNotify.notifyIfNewDevice(user.id, session.id, meta);
+    return token;
   }
 
   async logout(sessionId: string, userId: string): Promise<void> {

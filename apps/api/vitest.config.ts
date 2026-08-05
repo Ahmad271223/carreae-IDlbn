@@ -32,6 +32,9 @@ export default defineConfig({
       // rate-limit spec lowers AUTH_THROTTLE_LIMIT for its own app instance.
       THROTTLE_DEFAULT_LIMIT: "10000",
       AUTH_THROTTLE_LIMIT: "1000",
+      API_BASE_URL: "http://localhost:3001",
+      // Test-only key (32 bytes of 'a'); production keys come from a secret manager.
+      ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
     },
   },
 });

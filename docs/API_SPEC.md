@@ -30,8 +30,14 @@ POST   /auth/password/forgot       always 202
 POST   /auth/password/reset        single-use token
 GET    /auth/sessions              device list
 DELETE /auth/sessions/{id}         revoke device
-POST   /auth/mfa/totp              enroll · DELETE disable (step-up required)
-GET    /auth/oauth/{provider}/start|callback   google|apple
+POST   /auth/mfa/totp              start enrollment → {secret, otpauthUri}
+POST   /auth/mfa/totp/confirm      {code} — activates MFA
+POST   /auth/mfa/totp/disable      {code} — step-up required, session alone insufficient
+POST   /auth/mfa/verify            {challengeToken, code} — second login step
+GET    /auth/oauth/{provider}/start           302 to IdP (google|apple)
+GET|POST /auth/oauth/{provider}/callback      code flow return (Apple posts form_post)
+POST   /auth/oauth/{provider}/link            authenticated; explicit account linking —
+                                              SSO never links silently onto an existing email
 ```
 
 ### Profile & career data

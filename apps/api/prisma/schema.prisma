@@ -133,6 +133,12 @@ enum VerificationSubjectType {
 enum ActionTokenType {
   EMAIL_VERIFY
   PASSWORD_RESET
+  MFA_CHALLENGE
+}
+
+enum OauthPurpose {
+  LOGIN
+  LINK
 }
 
 enum AuditActorType {
@@ -198,6 +204,8 @@ model AuthCredential {
   /// AES-256-GCM application-layer encrypted (SECURITY.md §4).
   secretEncrypted String             @map("secret_encrypted")
   label           String?
+  /// TOTP enrollment counts only after the user proves possession with a code.
+  confirmedAt     DateTime?          @map("confirmed_at")
   lastUsedAt      DateTime?          @map("last_used_at")
   revokedAt       DateTime?          @map("revoked_at")
   createdAt       DateTime           @default(now()) @map("created_at")
@@ -457,6 +465,22 @@ model ActionToken {
 
   @@index([userId, type])
   @@map("action_tokens")
+}
+
+/// CSRF/replay protection for the OIDC authorization-code flow. State is a
+/// random token (hash stored), bound to provider + purpose; LINK states carry
+/// the authenticated user they may attach an identity to.
+model OauthState {
+  id        String           @id @default(uuid(7))
+  stateHash String           @unique @map("state_hash")
+  provider  IdentityProvider
+  purpose   OauthPurpose
+  userId    String?          @map("user_id")
+  expiresAt DateTime         @map("expires_at")
+  usedAt    DateTime?        @map("used_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  @@map("oauth_states")
 }
 
 // ---------- Notifications & audit ----------

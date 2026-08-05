@@ -15,11 +15,15 @@ import { Throttle, ThrottlerGuard } from "@nestjs/throttler";
 import {
   ForgotPasswordSchema,
   LoginSchema,
+  MfaConfirmSchema,
+  MfaLoginSchema,
   RegisterSchema,
   ResetPasswordSchema,
   VerifyEmailSchema,
   type ForgotPasswordDto,
   type LoginDto,
+  type MfaConfirmDto,
+  type MfaLoginDto,
   type RegisterDto,
   type ResetPasswordDto,
   type VerifyEmailDto,
@@ -27,6 +31,7 @@ import {
 import type { Request, Response } from "express";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 import { AuthService } from "./auth.service";
+import { MfaService } from "./mfa.service";
 import { CurrentAuth, SessionGuard } from "./session.guard";
 import {
   SESSION_COOKIE,
@@ -52,6 +57,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly sessions: SessionService,
+    private readonly mfa: MfaService,
   ) {}
 
   @Post("register")
@@ -80,10 +86,67 @@ export class AuthController {
     @Body(new ZodValidationPipe(LoginSchema)) dto: LoginDto,
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
+  ): Promise<
+    | { user: { id: string; email: string; locale: string } }
+    | { mfaRequired: true; challengeToken: string }
+  > {
+    const result = await this.auth.login(dto, requestMeta(req));
+    if (result.kind === "mfa_required") {
+      return { mfaRequired: true, challengeToken: result.challengeToken };
+    }
+    res.cookie(SESSION_COOKIE, result.token, COOKIE_OPTIONS);
+    const { user } = result;
+    return { user: { id: user.id, email: user.email, locale: user.locale } };
+  }
+
+  /** Second factor for the two-step login. Throttled like login itself. */
+  @Post("mfa/verify")
+  @HttpCode(200)
+  @Throttle({ default: { limit: authThrottleLimit(), ttl: 60_000 } })
+  async mfaVerify(
+    @Body(new ZodValidationPipe(MfaLoginSchema)) dto: MfaLoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
   ): Promise<{ user: { id: string; email: string; locale: string } }> {
-    const { token, user } = await this.auth.login(dto, requestMeta(req));
+    const { token, user } = await this.auth.completeMfaChallenge(
+      dto.challengeToken,
+      dto.code,
+      requestMeta(req),
+    );
     res.cookie(SESSION_COOKIE, token, COOKIE_OPTIONS);
     return { user: { id: user.id, email: user.email, locale: user.locale } };
+  }
+
+  @Post("mfa/totp")
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async enrollTotp(
+    @CurrentAuth() auth: SessionContext,
+  ): Promise<{ secret: string; otpauthUri: string }> {
+    return this.mfa.enrollTotp(auth.user);
+  }
+
+  @Post("mfa/totp/confirm")
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async confirmTotp(
+    @CurrentAuth() auth: SessionContext,
+    @Body(new ZodValidationPipe(MfaConfirmSchema)) dto: MfaConfirmDto,
+  ): Promise<{ enabled: true }> {
+    await this.mfa.confirmTotp(auth.user, dto.code);
+    return { enabled: true };
+  }
+
+  /** Step-up: disabling requires a valid current code, not just a session. */
+  @Post("mfa/totp/disable")
+  @HttpCode(200)
+  @UseGuards(SessionGuard)
+  async disableTotp(
+    @CurrentAuth() auth: SessionContext,
+    @Body(new ZodValidationPipe(MfaConfirmSchema)) dto: MfaConfirmDto,
+  ): Promise<{ enabled: false }> {
+    await this.mfa.disableTotp(auth.user, dto.code);
+    return { enabled: false };
   }
 
   @Post("logout")

@@ -166,3 +166,14 @@ export const ResetPasswordSchema = z.object({
   newPassword: PasswordSchema,
 });
 export type ResetPasswordDto = z.infer<typeof ResetPasswordSchema>;
+
+export const MfaCodeSchema = z.string().regex(/^\d{6}$/, "6-digit code expected");
+
+export const MfaConfirmSchema = z.object({ code: MfaCodeSchema });
+export type MfaConfirmDto = z.infer<typeof MfaConfirmSchema>;
+
+export const MfaLoginSchema = z.object({
+  challengeToken: TokenSchema,
+  code: MfaCodeSchema,
+});
+export type MfaLoginDto = z.infer<typeof MfaLoginSchema>;
