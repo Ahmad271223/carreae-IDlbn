@@ -1,0 +1,20 @@
+{
+  "name": "careerid",
+  "private": true,
+  "version": "0.0.1",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "security-check": "pnpm audit --prod && pnpm run -r security-check --if-present"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  }
+}

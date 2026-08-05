@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# builds
+dist/
+.next/
+.turbo/
+coverage/
+*.tsbuildinfo
+
+# environment & secrets — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# local data
+infra/docker/volumes/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
