@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { HealthModule } from "./modules/health/health.module";
+import { PrismaModule } from "./prisma/prisma.module";
 
 /**
  * Modular monolith root. Every domain from docs/ARCHITECTURE.md gets its own
@@ -7,6 +8,6 @@ import { HealthModule } from "./modules/health/health.module";
  * domain events — never via another module's repositories (boundary rule T4).
  */
 @Module({
-  imports: [HealthModule],
+  imports: [PrismaModule, HealthModule],
 })
 export class AppModule {}

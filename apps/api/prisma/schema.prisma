@@ -1,6 +1,10 @@
-// Prisma schema — initialized in Milestone 1.1.
-// Domain models land with Milestone 1.2 following docs/DATABASE_SCHEMA.md.
-// Statuses/enums must mirror @careerid/shared — that package is the source of truth.
+// Prisma schema — Phase 1 domains (identity, career, verification, audit).
+// Source of truth for the domain model: docs/DATABASE_SCHEMA.md.
+// Status enums mirror @careerid/shared — keep both in sync (tested in CI later
+// via a generated comparison; do not add values here without updating shared).
+//
+// Conventions: UUIDv7 ids (never sequential public ids), snake_case tables,
+// soft delete (deletedAt) only where DATABASE_SCHEMA.md marks it.
 
 generator client {
   provider = "prisma-client-js"
@@ -9,4 +13,463 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+  DEACTIVATED
+  ERASED
+}
+
+enum IdentityProvider {
+  GOOGLE
+  APPLE
+}
+
+enum AuthCredentialType {
+  TOTP
+  WEBAUTHN
+}
+
+enum ProfileVisibility {
+  PRIVATE
+}
+
+enum OrganizationType {
+  SCHOOL
+  UNIVERSITY
+  LANGUAGE_SCHOOL
+  TRAINING_PROVIDER
+  EMPLOYER
+}
+
+enum OrgVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  SUSPENDED
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  ISSUER
+  RECRUITER
+  VIEWER
+}
+
+enum RelationshipType {
+  STUDENT
+  ALUMNUS
+  EMPLOYEE
+  MEMBER
+}
+
+enum RelationshipStatus {
+  INVITED
+  ACTIVE
+  ENDED
+  DECLINED
+}
+
+enum RelationshipInitiator {
+  ORG
+  USER
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  INTERNSHIP
+  VOLUNTEER
+  FREELANCE
+}
+
+enum SkillCategory {
+  TECHNICAL
+  SOCIAL
+  PROFESSIONAL
+  SOFTWARE
+}
+
+enum LanguageLevel {
+  NATIVE
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+enum LanguageFramework {
+  CEFR
+  OTHER
+}
+
+enum LanguageSource {
+  SELF_DECLARED
+  CERTIFIED
+}
+
+enum VerificationStatus {
+  NONE
+  PENDING
+  VERIFIED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum VerificationSubjectType {
+  EDUCATION
+  EXPERIENCE
+  LANGUAGE
+}
+
+enum AuditActorType {
+  USER
+  ORG_MEMBER
+  ADMIN
+  SYSTEM
+}
+
+// ---------- Identity & access ----------
+
+model User {
+  id              String     @id @default(uuid(7))
+  /// Stored lower-cased; normalization enforced in the auth service.
+  email           String     @unique
+  emailVerifiedAt DateTime?  @map("email_verified_at")
+  phone           String?    @unique
+  phoneVerifiedAt DateTime?  @map("phone_verified_at")
+  /// Null for SSO-only accounts.
+  passwordHash    String?    @map("password_hash")
+  status          UserStatus @default(ACTIVE)
+  mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
+  locale          String     @default("en")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  deletedAt       DateTime?  @map("deleted_at")
+
+  identities           Identity[]
+  authCredentials      AuthCredential[]
+  sessions             Session[]
+  profile              Profile?
+  profileSensitive     ProfileSensitive?
+  organizationMembers  OrganizationMember[]
+  relationships        OrganizationRelationship[]
+  educations           Education[]
+  experiences          Experience[]
+  skills               Skill[]
+  languages            UserLanguage[]
+  verificationRequests VerificationRequest[]      @relation("VerificationSubjectUser")
+  notifications        Notification[]
+
+  @@map("users")
+}
+
+model Identity {
+  id              String           @id @default(uuid(7))
+  userId          String           @map("user_id")
+  provider        IdentityProvider
+  providerSubject String           @map("provider_subject")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerSubject])
+  @@map("identities")
+}
+
+model AuthCredential {
+  id              String             @id @default(uuid(7))
+  userId          String             @map("user_id")
+  type            AuthCredentialType
+  /// AES-256-GCM application-layer encrypted (SECURITY.md §4).
+  secretEncrypted String             @map("secret_encrypted")
+  label           String?
+  lastUsedAt      DateTime?          @map("last_used_at")
+  revokedAt       DateTime?          @map("revoked_at")
+  createdAt       DateTime           @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_credentials")
+}
+
+model Session {
+  id         String    @id @default(uuid(7))
+  userId     String    @map("user_id")
+  /// Only the hash is stored; raw token lives in the httpOnly cookie.
+  tokenHash  String    @unique @map("token_hash")
+  deviceName String?   @map("device_name")
+  ipCreated  String?   @map("ip_created")
+  userAgent  String?   @map("user_agent")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  lastSeenAt DateTime  @default(now()) @map("last_seen_at")
+  expiresAt  DateTime  @map("expires_at")
+  revokedAt  DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Profile {
+  userId      String            @id @map("user_id")
+  /// normalized-name + CSPRNG suffix; not an authorization token (M6).
+  slug        String            @unique
+  firstName   String            @map("first_name")
+  lastName    String            @map("last_name")
+  /// FK to documents lands with the wallet in Phase 2.
+  photoDocumentId String?       @map("photo_document_id")
+  headline    String?
+  summary     String?
+  desiredRole String?           @map("desired_role")
+  city        String?
+  countryCode String?           @map("country_code")
+  visibility  ProfileVisibility @default(PRIVATE)
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profiles")
+}
+
+/// Separate table, separate access path (never in AI context or default projections).
+model ProfileSensitive {
+  userId                  String    @id @map("user_id")
+  dateOfBirth             DateTime? @map("date_of_birth") @db.Date
+  nationality             String?
+  /// Application-layer encrypted.
+  contactPhoneEncrypted   String?   @map("contact_phone_encrypted")
+  contactAddressEncrypted String?   @map("contact_address_encrypted")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profile_sensitive")
+}
+
+// ---------- Organizations ----------
+
+model Organization {
+  id                 String                @id @default(uuid(7))
+  type               OrganizationType
+  name               String
+  legalName          String?               @map("legal_name")
+  countryCode        String                @map("country_code")
+  educationSystem    String?               @map("education_system")
+  website            String?
+  industry           String?
+  size               String?
+  /// Credential issuing and verification responses gated on VERIFIED (RBAC.md).
+  verificationStatus OrgVerificationStatus @default(PENDING) @map("verification_status")
+  verifiedAt         DateTime?             @map("verified_at")
+  verifiedById       String?               @map("verified_by_id")
+  createdAt          DateTime              @default(now()) @map("created_at")
+  updatedAt          DateTime              @updatedAt @map("updated_at")
+  deletedAt          DateTime?             @map("deleted_at")
+
+  members              OrganizationMember[]
+  relationships        OrganizationRelationship[]
+  verificationRequests VerificationRequest[]
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid(7))
+  organizationId String           @map("organization_id")
+  userId         String           @map("user_id")
+  role           OrganizationRole
+  invitedById    String?          @map("invited_by_id")
+  joinedAt       DateTime         @default(now()) @map("joined_at")
+  removedAt      DateTime?        @map("removed_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("organization_members")
+}
+
+/// The ONLY lens an organization has on a user (PRODUCT_REQUIREMENTS §7.3).
+model OrganizationRelationship {
+  id             String                @id @default(uuid(7))
+  organizationId String                @map("organization_id")
+  userId         String                @map("user_id")
+  type           RelationshipType
+  status         RelationshipStatus    @default(INVITED)
+  initiatedBy    RelationshipInitiator @map("initiated_by")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId, type])
+  @@map("organization_relationships")
+}
+
+// ---------- Career data ----------
+
+model Education {
+  id              String    @id @default(uuid(7))
+  userId          String    @map("user_id")
+  institutionName String    @map("institution_name")
+  /// Set when the institution is on the platform.
+  organizationId  String?   @map("organization_id")
+  degreeType      String    @map("degree_type")
+  fieldOfStudy    String?   @map("field_of_study")
+  countryCode     String    @map("country_code")
+  educationSystem String?   @map("education_system")
+  startDate       DateTime  @map("start_date") @db.Date
+  endDate         DateTime? @map("end_date") @db.Date
+  grade           String?
+  description     String?
+  displayOrder    Int       @default(0) @map("display_order")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, displayOrder])
+  @@map("educations")
+}
+
+model Experience {
+  id             String         @id @default(uuid(7))
+  userId         String         @map("user_id")
+  companyName    String         @map("company_name")
+  organizationId String?        @map("organization_id")
+  position       String
+  employmentType EmploymentType @map("employment_type")
+  location       String?
+  countryCode    String?        @map("country_code")
+  startDate      DateTime       @map("start_date") @db.Date
+  endDate        DateTime?      @map("end_date") @db.Date
+  description    String?
+  displayOrder   Int            @default(0) @map("display_order")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  deletedAt      DateTime?      @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, displayOrder])
+  @@map("experiences")
+}
+
+model Skill {
+  id           String        @id @default(uuid(7))
+  userId       String        @map("user_id")
+  name         String
+  category     SkillCategory
+  level        String?
+  displayOrder Int           @default(0) @map("display_order")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  deletedAt    DateTime?     @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, displayOrder])
+  @@map("skills")
+}
+
+model UserLanguage {
+  id           String            @id @default(uuid(7))
+  userId       String            @map("user_id")
+  /// ISO 639-1.
+  language     String
+  level        LanguageLevel
+  framework    LanguageFramework @default(CEFR)
+  source       LanguageSource    @default(SELF_DECLARED)
+  /// FK to credentials lands in Phase 2; CERTIFIED requires it then.
+  credentialId String?           @map("credential_id")
+  displayOrder Int               @default(0) @map("display_order")
+  createdAt    DateTime          @default(now()) @map("created_at")
+  updatedAt    DateTime          @updatedAt @map("updated_at")
+  deletedAt    DateTime?         @map("deleted_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, displayOrder])
+  @@map("user_languages")
+}
+
+// ---------- Verification (PRODUCT_REQUIREMENTS §5) ----------
+
+model VerificationRequest {
+  id             String                  @id @default(uuid(7))
+  userId         String                  @map("user_id")
+  subjectType    VerificationSubjectType @map("subject_type")
+  subjectId      String                  @map("subject_id")
+  organizationId String                  @map("organization_id")
+  status         VerificationStatus      @default(PENDING)
+  /// Canonical snapshot of the verifiable fields at request time. Confirmation
+  /// is atomic over exactly this snapshot; the verifier sees nothing else.
+  fieldSnapshot  Json                    @map("field_snapshot")
+  /// SHA-256 over the canonical snapshot. Any write to a covered field on the
+  /// subject entry reverts status to NONE in the same transaction.
+  fieldHash      String                  @map("field_hash")
+  requestedAt    DateTime                @default(now()) @map("requested_at")
+  respondedAt    DateTime?               @map("responded_at")
+  respondedById  String?                 @map("responded_by_id")
+  expiresAt      DateTime                @map("expires_at")
+  revokedAt      DateTime?               @map("revoked_at")
+  revokeReason   String?                 @map("revoke_reason")
+
+  user         User         @relation("VerificationSubjectUser", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  @@index([subjectType, subjectId])
+  @@index([organizationId, status])
+  @@map("verification_requests")
+}
+
+// ---------- Notifications & audit ----------
+
+model Notification {
+  id        String    @id @default(uuid(7))
+  userId    String    @map("user_id")
+  type      String
+  payload   Json
+  channels  String[]
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+/// Append-only, hash-chained (SECURITY.md §1). The application role receives
+/// INSERT+SELECT only — grant applied in migration SQL, chain verified by a job.
+model AuditEvent {
+  id        String         @id @default(uuid(7))
+  sequence  BigInt         @unique @default(autoincrement())
+  actorType AuditActorType @map("actor_type")
+  actorId   String?        @map("actor_id")
+  action    String
+  targetType String?       @map("target_type")
+  targetId  String?        @map("target_id")
+  /// IDs and coarse facts only — no PII payloads in audit metadata.
+  metadata  Json?
+  ipCoarse  String?        @map("ip_coarse")
+  prevHash  String         @map("prev_hash")
+  hash      String
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  @@index([actorType, actorId])
+  @@map("audit_events")
 }
