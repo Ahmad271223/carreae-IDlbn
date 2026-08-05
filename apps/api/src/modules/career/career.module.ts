@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
+import { VerificationModule } from "../verification/verification.module";
 import {
   EducationsController,
   ExperiencesController,
@@ -9,7 +10,7 @@ import {
 import { CareerService } from "./career.service";
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, VerificationModule],
   controllers: [
     EducationsController,
     ExperiencesController,

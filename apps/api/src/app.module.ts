@@ -4,6 +4,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { CareerModule } from "./modules/career/career.module";
 import { ProfileModule } from "./modules/profile/profile.module";
+import { VerificationModule } from "./modules/verification/verification.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -30,6 +31,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     AuthModule,
     ProfileModule,
     CareerModule,
+    VerificationModule,
   ],
 })
 export class AppModule {}

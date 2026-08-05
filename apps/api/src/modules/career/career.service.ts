@@ -11,15 +11,62 @@ import type {
 } from "@careerid/shared";
 import type { Education, Experience, Skill, UserLanguage } from "@prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
+import { VerificationService } from "../verification/verification.service";
+import type { VerifiableSubjectType } from "../verification/coverage";
+
+/** Entity plus the flag telling the client a verification badge just fell. */
+export interface UpdateResult<T> {
+  entity: T;
+  verificationReset: boolean;
+}
 
 /**
  * Owner-scoped CRUD for the career entities. Every query filters by the
  * authenticated user's id — a foreign id behaves exactly like a missing one
  * (404, no existence leak). Deletes are soft (deletedAt) per DATABASE_SCHEMA.
+ *
+ * Verified data is immutable (§5): editing a covered field revokes the
+ * VERIFIED request in the same transaction as the entity update.
  */
 @Injectable()
 export class CareerService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly verifications: VerificationService,
+  ) {}
+
+  /** Runs the update together with a verification reset when required. */
+  private async updateWithResetCheck<T>(
+    userId: string,
+    subjectType: VerifiableSubjectType,
+    subjectId: string,
+    changedFields: string[],
+    performUpdate: (tx: Parameters<Parameters<PrismaService["$transaction"]>[0]>[0]) => Promise<T>,
+  ): Promise<UpdateResult<T>> {
+    const resettable = await this.verifications.findResettableRequest(
+      subjectType,
+      subjectId,
+      changedFields,
+    );
+    const entity = await this.prisma.$transaction(async (tx) => {
+      const updated = await performUpdate(tx);
+      if (resettable) {
+        await tx.verificationRequest.update({
+          where: { id: resettable.id },
+          data: {
+            status: "REVOKED",
+            revokedAt: new Date(),
+            revokeReason: "verified_field_edited",
+          },
+        });
+      }
+      return updated;
+    });
+    if (resettable) {
+      await this.verifications.auditReset(userId, resettable.id);
+    }
+    return { entity, verificationReset: Boolean(resettable) };
+  }
 
   // ---------- Educations ----------
 
@@ -63,26 +110,30 @@ export class CareerService {
     userId: string,
     id: string,
     dto: EducationUpdateDto,
-  ): Promise<Education> {
+  ): Promise<UpdateResult<Education>> {
     await this.getEducation(userId, id);
-    return this.prisma.education.update({
-      where: { id },
-      data: {
-        ...dto,
-        ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
-        ...("endDate" in dto
-          ? { endDate: dto.endDate ? new Date(dto.endDate) : null }
-          : {}),
-      },
-    });
+    return this.updateWithResetCheck(
+      userId,
+      "EDUCATION",
+      id,
+      Object.keys(dto),
+      (tx) =>
+        tx.education.update({
+          where: { id },
+          data: {
+            ...dto,
+            ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
+            ...("endDate" in dto
+              ? { endDate: dto.endDate ? new Date(dto.endDate) : null }
+              : {}),
+          },
+        }),
+    );
   }
 
   async deleteEducation(userId: string, id: string): Promise<void> {
     await this.getEducation(userId, id);
-    await this.prisma.education.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await this.softDeleteWithRequests("education", "EDUCATION", id);
   }
 
   // ---------- Experiences ----------
@@ -126,26 +177,30 @@ export class CareerService {
     userId: string,
     id: string,
     dto: ExperienceUpdateDto,
-  ): Promise<Experience> {
+  ): Promise<UpdateResult<Experience>> {
     await this.getExperience(userId, id);
-    return this.prisma.experience.update({
-      where: { id },
-      data: {
-        ...dto,
-        ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
-        ...("endDate" in dto
-          ? { endDate: dto.endDate ? new Date(dto.endDate) : null }
-          : {}),
-      },
-    });
+    return this.updateWithResetCheck(
+      userId,
+      "EXPERIENCE",
+      id,
+      Object.keys(dto),
+      (tx) =>
+        tx.experience.update({
+          where: { id },
+          data: {
+            ...dto,
+            ...(dto.startDate ? { startDate: new Date(dto.startDate) } : {}),
+            ...("endDate" in dto
+              ? { endDate: dto.endDate ? new Date(dto.endDate) : null }
+              : {}),
+          },
+        }),
+    );
   }
 
   async deleteExperience(userId: string, id: string): Promise<void> {
     await this.getExperience(userId, id);
-    await this.prisma.experience.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
+    await this.softDeleteWithRequests("experience", "EXPERIENCE", id);
   }
 
   // ---------- Skills ----------
@@ -221,12 +276,14 @@ export class CareerService {
     userId: string,
     id: string,
     dto: LanguageUpdateDto,
-  ): Promise<UserLanguage> {
+  ): Promise<UpdateResult<UserLanguage>> {
     const row = await this.prisma.userLanguage.findFirst({
       where: { id, userId, deletedAt: null },
     });
     if (!row) throw new NotFoundException({ code: "NOT_FOUND" });
-    return this.prisma.userLanguage.update({ where: { id }, data: dto });
+    return this.updateWithResetCheck(userId, "LANGUAGE", id, Object.keys(dto), (tx) =>
+      tx.userLanguage.update({ where: { id }, data: dto }),
+    );
   }
 
   async deleteLanguage(userId: string, id: string): Promise<void> {
@@ -234,9 +291,35 @@ export class CareerService {
       where: { id, userId, deletedAt: null },
     });
     if (!row) throw new NotFoundException({ code: "NOT_FOUND" });
-    await this.prisma.userLanguage.update({
-      where: { id },
-      data: { deletedAt: new Date() },
+    await this.softDeleteWithRequests("userLanguage", "LANGUAGE", id);
+  }
+
+  /** Deleting an entry also ends any open or granted verification on it. */
+  private async softDeleteWithRequests(
+    model: "education" | "experience" | "userLanguage",
+    subjectType: VerifiableSubjectType,
+    id: string,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const delegate = tx[model] as unknown as {
+        update: (args: {
+          where: { id: string };
+          data: { deletedAt: Date };
+        }) => Promise<unknown>;
+      };
+      await delegate.update({ where: { id }, data: { deletedAt: new Date() } });
+      await tx.verificationRequest.updateMany({
+        where: {
+          subjectType,
+          subjectId: id,
+          status: { in: ["PENDING", "VERIFIED"] },
+        },
+        data: {
+          status: "REVOKED",
+          revokedAt: new Date(),
+          revokeReason: "subject_deleted",
+        },
+      });
     });
   }
 

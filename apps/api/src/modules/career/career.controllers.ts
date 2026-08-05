@@ -56,12 +56,17 @@ export class EducationsController {
   }
 
   @Patch(":id")
-  update(
+  async update(
     @CurrentAuth() auth: SessionContext,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(EducationUpdateSchema)) dto: EducationUpdateDto,
   ) {
-    return this.career.updateEducation(auth.user.id, id, dto);
+    const { entity, verificationReset } = await this.career.updateEducation(
+      auth.user.id,
+      id,
+      dto,
+    );
+    return { ...entity, verificationReset };
   }
 
   @Delete(":id")
@@ -95,12 +100,17 @@ export class ExperiencesController {
   }
 
   @Patch(":id")
-  update(
+  async update(
     @CurrentAuth() auth: SessionContext,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(ExperienceUpdateSchema)) dto: ExperienceUpdateDto,
   ) {
-    return this.career.updateExperience(auth.user.id, id, dto);
+    const { entity, verificationReset } = await this.career.updateExperience(
+      auth.user.id,
+      id,
+      dto,
+    );
+    return { ...entity, verificationReset };
   }
 
   @Delete(":id")
@@ -163,12 +173,17 @@ export class LanguagesController {
   }
 
   @Patch(":id")
-  update(
+  async update(
     @CurrentAuth() auth: SessionContext,
     @Param("id") id: string,
     @Body(new ZodValidationPipe(LanguageUpdateSchema)) dto: LanguageUpdateDto,
   ) {
-    return this.career.updateLanguage(auth.user.id, id, dto);
+    const { entity, verificationReset } = await this.career.updateLanguage(
+      auth.user.id,
+      id,
+      dto,
+    );
+    return { ...entity, verificationReset };
   }
 
   @Delete(":id")

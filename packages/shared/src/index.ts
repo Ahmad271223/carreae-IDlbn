@@ -332,3 +332,18 @@ export const LanguageUpdateSchema = z
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
 export type LanguageUpdateDto = z.infer<typeof LanguageUpdateSchema>;
+
+// ---------- Verification DTOs (§5) ----------
+
+export const VerificationSubjectTypeSchema = z.enum([
+  "EDUCATION",
+  "EXPERIENCE",
+  "LANGUAGE",
+]);
+
+export const VerificationCreateSchema = z.object({
+  subjectType: VerificationSubjectTypeSchema,
+  subjectId: z.string().uuid(),
+  organizationId: z.string().uuid(),
+});
+export type VerificationCreateDto = z.infer<typeof VerificationCreateSchema>;

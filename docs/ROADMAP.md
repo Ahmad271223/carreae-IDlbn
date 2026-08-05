@@ -7,16 +7,16 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
 - **0.1** Analysis + 8 core documents ✅ (docs/)
 - **0.2** Repository structure, tooling config, docker-compose dev stack, CI skeleton
 
-## Phase 1 — Identity & career core
-- **1.1** Monorepo scaffolding builds: Next.js app, NestJS app, shared/branding/i18n
+## Phase 1 — Identity & career core ✅ (completed 2026-08-05)
+- **1.1** ✅ Monorepo scaffolding builds: Next.js app, NestJS app, shared/branding/i18n
   packages, Prisma init, healthcheck endpoint, CI green
-- **1.2** Database migrations for identity + career domains; seed framework
-- **1.3** Auth: register/verify-email/login/logout/reset, Argon2id, sessions + devices;
+- **1.2** ✅ Database migrations for identity + career domains; seed framework
+- **1.3** ✅ Auth: register/verify-email/login/logout/reset, Argon2id, sessions + devices;
   auth tests incl. enumeration & rate limits
-- **1.4** MFA (TOTP) + SSO Google/Apple + suspicious-login notification
-- **1.5** Profile (incl. sensitive split, slug, completion), education, experience,
+- **1.4** ✅ MFA (TOTP) + SSO Google/Apple + suspicious-login notification
+- **1.5** ✅ Profile (incl. sensitive split, slug, completion), education, experience,
   skills, languages CRUD + i18n ar/en/fr + RTL CI snapshots
-- **1.6** Verification requests end-to-end (request→confirm/decline/expire/revoke,
+- **1.6** ✅ Verification requests end-to-end (request→confirm/decline/expire/revoke,
   snapshot hash, auto-reset on edit) — first §65 test subset green
 
 ## Phase 2 — Documents & credentials
