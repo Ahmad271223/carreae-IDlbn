@@ -177,3 +177,158 @@ export const MfaLoginSchema = z.object({
   code: MfaCodeSchema,
 });
 export type MfaLoginDto = z.infer<typeof MfaLoginSchema>;
+
+// ---------- Profile & career data DTOs ----------
+
+const TrimmedString = (max: number) => z.string().trim().min(1).max(max);
+/** ISO 8601 calendar date (YYYY-MM-DD); month/day precision is enough here. */
+export const IsoDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "expected YYYY-MM-DD");
+
+export const ProfileUpdateSchema = z
+  .object({
+    firstName: TrimmedString(100),
+    lastName: TrimmedString(100),
+    headline: z.string().trim().max(200).nullish(),
+    summary: z.string().trim().max(2000).nullish(),
+    desiredRole: z.string().trim().max(200).nullish(),
+    city: z.string().trim().max(120).nullish(),
+    countryCode: CountryCodeSchema.nullish(),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type ProfileUpdateDto = z.infer<typeof ProfileUpdateSchema>;
+
+export const SensitiveUpdateSchema = z
+  .object({
+    dateOfBirth: IsoDateSchema.nullish(),
+    nationality: z.string().trim().max(120).nullish(),
+    contactPhone: z.string().trim().max(40).nullish(),
+    contactAddress: z.string().trim().max(500).nullish(),
+  })
+  .partial();
+export type SensitiveUpdateDto = z.infer<typeof SensitiveUpdateSchema>;
+
+const dateRange = { message: "endDate must not precede startDate" };
+
+export const EducationCreateSchema = z
+  .object({
+    institutionName: TrimmedString(300),
+    degreeType: TrimmedString(200),
+    fieldOfStudy: z.string().trim().max(200).nullish(),
+    countryCode: CountryCodeSchema,
+    educationSystem: z.string().trim().max(100).nullish(),
+    startDate: IsoDateSchema,
+    endDate: IsoDateSchema.nullish(),
+    grade: z.string().trim().max(50).nullish(),
+    description: z.string().trim().max(2000).nullish(),
+  })
+  .refine((v) => !v.endDate || v.endDate >= v.startDate, dateRange);
+export type EducationCreateDto = z.infer<typeof EducationCreateSchema>;
+export const EducationUpdateSchema = z
+  .object({
+    institutionName: TrimmedString(300),
+    degreeType: TrimmedString(200),
+    fieldOfStudy: z.string().trim().max(200).nullish(),
+    countryCode: CountryCodeSchema,
+    educationSystem: z.string().trim().max(100).nullish(),
+    startDate: IsoDateSchema,
+    endDate: IsoDateSchema.nullish(),
+    grade: z.string().trim().max(50).nullish(),
+    description: z.string().trim().max(2000).nullish(),
+    displayOrder: z.number().int().min(0),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type EducationUpdateDto = z.infer<typeof EducationUpdateSchema>;
+
+export const EmploymentTypeSchema = z.enum([
+  "FULL_TIME",
+  "PART_TIME",
+  "INTERNSHIP",
+  "VOLUNTEER",
+  "FREELANCE",
+]);
+
+export const ExperienceCreateSchema = z
+  .object({
+    companyName: TrimmedString(300),
+    position: TrimmedString(200),
+    employmentType: EmploymentTypeSchema,
+    location: z.string().trim().max(200).nullish(),
+    countryCode: CountryCodeSchema.nullish(),
+    startDate: IsoDateSchema,
+    endDate: IsoDateSchema.nullish(),
+    description: z.string().trim().max(4000).nullish(),
+  })
+  .refine((v) => !v.endDate || v.endDate >= v.startDate, dateRange);
+export type ExperienceCreateDto = z.infer<typeof ExperienceCreateSchema>;
+export const ExperienceUpdateSchema = z
+  .object({
+    companyName: TrimmedString(300),
+    position: TrimmedString(200),
+    employmentType: EmploymentTypeSchema,
+    location: z.string().trim().max(200).nullish(),
+    countryCode: CountryCodeSchema.nullish(),
+    startDate: IsoDateSchema,
+    endDate: IsoDateSchema.nullish(),
+    description: z.string().trim().max(4000).nullish(),
+    displayOrder: z.number().int().min(0),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type ExperienceUpdateDto = z.infer<typeof ExperienceUpdateSchema>;
+
+export const SkillCategorySchema = z.enum([
+  "TECHNICAL",
+  "SOCIAL",
+  "PROFESSIONAL",
+  "SOFTWARE",
+]);
+
+export const SkillCreateSchema = z.object({
+  name: TrimmedString(120),
+  category: SkillCategorySchema,
+  level: z.string().trim().max(50).nullish(),
+});
+export type SkillCreateDto = z.infer<typeof SkillCreateSchema>;
+export const SkillUpdateSchema = z
+  .object({
+    name: TrimmedString(120),
+    category: SkillCategorySchema,
+    level: z.string().trim().max(50).nullish(),
+    displayOrder: z.number().int().min(0),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type SkillUpdateDto = z.infer<typeof SkillUpdateSchema>;
+
+export const LanguageLevelSchema = z.enum([
+  "NATIVE",
+  "A1",
+  "A2",
+  "B1",
+  "B2",
+  "C1",
+  "C2",
+]);
+
+/** ISO 639-1, lower-case. `source` is server-controlled: CERTIFIED only ever
+ * results from a credential link, never from user input. */
+export const LanguageCreateSchema = z.object({
+  language: z
+    .string()
+    .length(2)
+    .regex(/^[a-z]{2}$/, "ISO 639-1 expected"),
+  level: LanguageLevelSchema,
+});
+export type LanguageCreateDto = z.infer<typeof LanguageCreateSchema>;
+export const LanguageUpdateSchema = z
+  .object({
+    level: LanguageLevelSchema,
+    displayOrder: z.number().int().min(0),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type LanguageUpdateDto = z.infer<typeof LanguageUpdateSchema>;
