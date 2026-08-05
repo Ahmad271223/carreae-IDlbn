@@ -14,7 +14,17 @@
     "test": "turbo run test",
     "security-check": "pnpm audit --prod && pnpm run -r security-check --if-present"
   },
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5.23": ">=8.5.23",
+      "sharp@<0.35.0": ">=0.35.0"
+    }
+  },
   "devDependencies": {
-    "turbo": "^2.3.0"
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "turbo": "^2.3.0",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
   }
 }

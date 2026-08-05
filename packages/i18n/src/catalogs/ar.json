@@ -1,0 +1,8 @@
+{
+  "common.save": "حفظ",
+  "common.cancel": "إلغاء",
+  "common.delete": "حذف",
+  "common.share": "مشاركة",
+  "verification.verifiedBy": "تم التحقق من قبل {org}",
+  "verification.selfDeclared": "تصريح ذاتي"
+}

@@ -1,0 +1,8 @@
+{
+  "common.save": "Enregistrer",
+  "common.cancel": "Annuler",
+  "common.delete": "Supprimer",
+  "common.share": "Partager",
+  "verification.verifiedBy": "Vérifié par {org}",
+  "verification.selfDeclared": "Déclaration personnelle"
+}

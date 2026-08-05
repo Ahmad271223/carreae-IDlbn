@@ -1,0 +1,12 @@
+// Prisma schema — initialized in Milestone 1.1.
+// Domain models land with Milestone 1.2 following docs/DATABASE_SCHEMA.md.
+// Statuses/enums must mirror @careerid/shared — that package is the source of truth.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

@@ -1,0 +1,11 @@
+{
+  "extends": "../../tooling/tsconfig/base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "declaration": false,
+    "strictPropertyInitialization": false
+  },
+  "include": ["src"]
+}

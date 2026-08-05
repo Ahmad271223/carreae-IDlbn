@@ -1,0 +1,27 @@
+{
+  "name": "@careerid/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint app"
+  },
+  "dependencies": {
+    "@careerid/branding": "workspace:*",
+    "@careerid/i18n": "workspace:*",
+    "@careerid/shared": "workspace:*",
+    "@careerid/ui": "workspace:*",
+    "next": "^15.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.7.2"
+  }
+}
