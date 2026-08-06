@@ -12,6 +12,7 @@ const NAV = [
   ["wallet", "nav.wallet"],
   ["cvs", "nav.cvs"],
   ["letters", "nav.letters"],
+  ["credentials", "nav.credentials"],
   ["applications", "nav.applications"],
 ] as const;
 
