@@ -15,11 +15,18 @@ interface Entry {
   id: string;
   [key: string]: unknown;
 }
-interface VerificationRow {
+interface VerificationRequest {
+  id: string;
   subjectType: string;
   subjectId: string;
+  organizationId: string;
   status: string;
   organizationName: string;
+}
+interface Relationship {
+  organizationId: string;
+  organizationName: string;
+  status: string;
 }
 
 export default function ProfilePage() {
@@ -29,7 +36,8 @@ export default function ProfilePage() {
   const [experiences, setExperiences] = useState<Entry[]>([]);
   const [languages, setLanguages] = useState<Entry[]>([]);
   const [skills, setSkills] = useState<Entry[]>([]);
-  const [verifications, setVerifications] = useState<VerificationRow[]>([]);
+  const [verifications, setVerifications] = useState<VerificationRequest[]>([]);
+  const [relationships, setRelationships] = useState<Relationship[]>([]);
   const [error, setError] = useState("");
 
   const reload = useCallback(() => {
@@ -40,23 +48,58 @@ export default function ProfilePage() {
     api<Entry[]>("/experiences").then(setExperiences).catch(() => undefined);
     api<Entry[]>("/languages").then(setLanguages).catch(() => undefined);
     api<Entry[]>("/skills").then(setSkills).catch(() => undefined);
-    api<VerificationRow[]>("/verifications")
+    api<VerificationRequest[]>("/verifications")
       .then(setVerifications)
+      .catch(() => undefined);
+    api<Relationship[]>("/relationships")
+      .then((rows) => setRelationships(rows.filter((r) => r.status === "ACTIVE")))
       .catch(() => undefined);
   }, []);
   useEffect(reload, [reload]);
 
-  function badgeFor(subjectType: string, id: string) {
-    const verified = verifications.find(
-      (v) =>
-        v.subjectType === subjectType && v.subjectId === id && v.status === "VERIFIED",
+  async function requestVerification(
+    subjectType: string,
+    subjectId: string,
+    organizationId: string,
+  ) {
+    setError("");
+    try {
+      await api("/verifications", {
+        method: "POST",
+        body: { subjectType, subjectId, organizationId },
+      });
+      reload();
+    } catch (e) {
+      // Only VERIFIED orgs can confirm (§44) — surface that distinctly.
+      setError(
+        e instanceof Error && e.message === "ORGANIZATION_NOT_VERIFIED"
+          ? t("verification.orgNotVerified")
+          : t("common.error"),
+      );
+    }
+  }
+
+  async function revokeVerification(id: string) {
+    await api(`/verifications/${id}/revoke`, { method: "POST" }).catch(
+      () => undefined,
     );
-    // §5: only VERIFIED is marked; everything else shows nothing at all.
-    return verified ? (
-      <VerifiedBadge
-        label={t("verification.verifiedBy", { org: verified.organizationName })}
+    reload();
+  }
+
+  function verificationFor(subjectType: string, id: string) {
+    // Owner view — pending/declined are visible to the owner only (§5).
+    return (
+      <VerificationControl
+        subjectType={subjectType}
+        subjectId={id}
+        requests={verifications.filter(
+          (v) => v.subjectType === subjectType && v.subjectId === id,
+        )}
+        relationships={relationships}
+        onRequest={requestVerification}
+        onRevoke={revokeVerification}
       />
-    ) : null;
+    );
   }
 
   async function saveProfile(event: React.FormEvent) {
@@ -129,7 +172,7 @@ export default function ProfilePage() {
           render={(e) => (
             <>
               {String(e.degreeType)} — {String(e.institutionName)}{" "}
-              {badgeFor("EDUCATION", e.id)}
+              {verificationFor("EDUCATION", e.id)}
             </>
           )}
           onRemove={(id) => removeEntry("/educations", id)}
@@ -157,7 +200,7 @@ export default function ProfilePage() {
           render={(e) => (
             <>
               {String(e.position)} — {String(e.companyName)}{" "}
-              {badgeFor("EXPERIENCE", e.id)}
+              {verificationFor("EXPERIENCE", e.id)}
             </>
           )}
           onRemove={(id) => removeEntry("/experiences", id)}
@@ -187,7 +230,7 @@ export default function ProfilePage() {
           entries={languages}
           render={(e) => (
             <>
-              {String(e.language)} — {String(e.level)} {badgeFor("LANGUAGE", e.id)}
+              {String(e.language)} — {String(e.level)} {verificationFor("LANGUAGE", e.id)}
             </>
           )}
           onRemove={(id) => removeEntry("/languages", id)}
@@ -289,5 +332,88 @@ function AddForm({
         {addLabel}
       </Button>
     </form>
+  );
+}
+
+/**
+ * Per-entry verification: the VERIFIED badge (public-facing, §5) plus the
+ * owner-only request/revoke controls. Pending and declined states are shown
+ * to the owner here only — they never reach a share projection.
+ */
+function VerificationControl({
+  subjectType,
+  subjectId,
+  requests,
+  relationships,
+  onRequest,
+  onRevoke,
+}: {
+  subjectType: string;
+  subjectId: string;
+  requests: VerificationRequest[];
+  relationships: Relationship[];
+  onRequest: (subjectType: string, subjectId: string, orgId: string) => void;
+  onRevoke: (id: string) => void;
+}) {
+  const { t } = useT();
+  const [orgId, setOrgId] = useState("");
+
+  const verified = requests.find((r) => r.status === "VERIFIED");
+  if (verified) {
+    return (
+      <VerifiedBadge
+        label={t("verification.verifiedBy", { org: verified.organizationName })}
+      />
+    );
+  }
+
+  const pending = requests.find((r) => r.status === "PENDING");
+  if (pending) {
+    return (
+      <span className="ms-2 inline-flex items-center gap-2 text-xs text-gray-500">
+        {t("verification.pendingWith", { org: pending.organizationName })}
+        <button
+          onClick={() => onRevoke(pending.id)}
+          className="text-gray-400 hover:text-red-600"
+        >
+          {t("verification.cancel")}
+        </button>
+      </span>
+    );
+  }
+
+  const declined = requests.find((r) => r.status === "DECLINED");
+
+  if (relationships.length === 0) {
+    return declined ? (
+      <span className="ms-2 text-xs text-gray-400">{t("verification.declined")}</span>
+    ) : null;
+  }
+
+  return (
+    <span className="ms-2 inline-flex flex-wrap items-center gap-1">
+      {declined && (
+        <span className="text-xs text-gray-400">{t("verification.declined")}</span>
+      )}
+      <select
+        value={orgId}
+        onChange={(e) => setOrgId(e.target.value)}
+        className="rounded-md border border-gray-300 bg-white px-1.5 py-0.5 text-xs"
+      >
+        <option value="">{t("verification.chooseOrg")}</option>
+        {relationships.map((r) => (
+          <option key={r.organizationId} value={r.organizationId}>
+            {r.organizationName}
+          </option>
+        ))}
+      </select>
+      <button
+        disabled={!orgId}
+        onClick={() => orgId && onRequest(subjectType, subjectId, orgId)}
+        className="text-xs text-brand hover:underline disabled:text-gray-300"
+      >
+        {t("verification.request")}
+      </button>
+    </span>
   );
 }
