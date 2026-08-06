@@ -359,6 +359,86 @@ export const UploadIntentSchema = z.object({
 });
 export type UploadIntentDto = z.infer<typeof UploadIntentSchema>;
 
+// ---------- CV DTOs (§18–§22) ----------
+
+export const CvSectionTypeSchema = z.enum([
+  "profile",
+  "experience",
+  "education",
+  "languages",
+  "skills",
+  "certificates",
+  "references",
+]);
+
+export const CvCreateSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  /** Validated against the template catalog server-side. */
+  templateKey: z.string().trim().min(1).max(40),
+  language: LocaleSchema,
+  targetCountryCode: CountryCodeSchema.optional(),
+});
+export type CvCreateDto = z.infer<typeof CvCreateSchema>;
+
+export const CvUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120),
+    templateKey: z.string().trim().min(1).max(40),
+    language: LocaleSchema,
+    targetCountryCode: CountryCodeSchema.nullable(),
+    photoEnabled: z.boolean(),
+    /** Sections are reordered/hidden, never deleted (§21). */
+    sectionOrder: z.array(CvSectionTypeSchema).max(10),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type CvUpdateDto = z.infer<typeof CvUpdateSchema>;
+
+export const CvItemSourceTypeSchema = z.enum([
+  "EXPERIENCE",
+  "EDUCATION",
+  "CREDENTIAL",
+  "LANGUAGE",
+  "SKILL",
+  "CUSTOM",
+]);
+
+/** Presentation-only override payload; allowed keys depend on source type and
+ * verification state — enforced server-side (§22). */
+export const CvItemOverrideSchema = z
+  .record(
+    z.string().min(1).max(40),
+    z.union([
+      z.string().max(2000),
+      z.array(z.string().max(300)).max(20),
+      z.null(),
+    ]),
+  )
+  .refine((v) => Object.keys(v).length <= 20, "too many override keys");
+
+export const CvItemSchema = z
+  .object({
+    sourceType: CvItemSourceTypeSchema,
+    sourceId: z.string().uuid().optional(),
+    displayOverride: CvItemOverrideSchema.optional(),
+    order: z.number().int().min(0),
+    visible: z.boolean().default(true),
+  })
+  .refine((v) => v.sourceType === "CUSTOM" || Boolean(v.sourceId), {
+    message: "sourceId required for non-custom items",
+  })
+  .refine(
+    (v) =>
+      v.sourceType !== "CUSTOM" ||
+      typeof v.displayOverride?.title === "string",
+    { message: "CUSTOM items need displayOverride.title" },
+  );
+
+export const CvItemsPutSchema = z.object({
+  items: z.array(CvItemSchema).max(100),
+});
+export type CvItemsPutDto = z.infer<typeof CvItemsPutSchema>;
+
 // ---------- Credential DTOs (§6) ----------
 
 export const CredentialTypeSchema = z.enum([

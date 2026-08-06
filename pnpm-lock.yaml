@@ -42,6 +42,9 @@ importers:
       '@careerid/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@careerid/templates':
+        specifier: workspace:^
+        version: link:../../packages/templates
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.28(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -78,6 +81,12 @@ importers:
       otplib:
         specifier: ^13.4.1
         version: 13.4.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.8
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.8(react@19.2.8)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

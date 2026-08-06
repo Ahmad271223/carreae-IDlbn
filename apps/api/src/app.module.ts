@@ -7,6 +7,7 @@ import { ProfileModule } from "./modules/profile/profile.module";
 import { VerificationModule } from "./modules/verification/verification.module";
 import { DocumentsModule } from "./modules/documents/documents.module";
 import { CredentialsModule } from "./modules/credentials/credentials.module";
+import { CvModule } from "./modules/cv/cv.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -36,6 +37,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     VerificationModule,
     DocumentsModule,
     CredentialsModule,
+    CvModule,
   ],
 })
 export class AppModule {}

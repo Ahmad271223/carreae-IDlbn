@@ -161,6 +161,15 @@ enum CredentialStatus {
   SUPERSEDED
 }
 
+enum CvItemSourceType {
+  EXPERIENCE
+  EDUCATION
+  CREDENTIAL
+  LANGUAGE
+  SKILL
+  CUSTOM
+}
+
 enum DocumentCategory {
   CV
   COVER_LETTER
@@ -225,6 +234,7 @@ model User {
   actionTokens         ActionToken[]
   documents            Document[]
   credentials          Credential[]               @relation("CredentialSubject")
+  cvs                  Cv[]
 
   @@map("users")
 }
@@ -511,6 +521,48 @@ model ActionToken {
 
   @@index([userId, type])
   @@map("action_tokens")
+}
+
+/// A CV references Career ID records; it never copies them. Presentation
+/// tweaks live in cv_items.displayOverride (§22) — the source stays intact.
+model Cv {
+  id                String    @id @default(uuid(7))
+  userId            String    @map("user_id")
+  title             String
+  templateKey       String    @map("template_key")
+  language          String
+  targetCountryCode String?   @map("target_country_code")
+  /// Per-CV decision (§20), never per-user.
+  photoEnabled      Boolean   @default(false) @map("photo_enabled")
+  /// Ordered array of section types; hidden sections keep their slot.
+  sectionOrder      Json      @map("section_order")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
+
+  user  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CvItem[]
+
+  @@index([userId])
+  @@map("cvs")
+}
+
+model CvItem {
+  id         String           @id @default(uuid(7))
+  cvId       String           @map("cv_id")
+  sourceType CvItemSourceType @map("source_type")
+  /// Career ID record reference; null only for CUSTOM items.
+  sourceId   String?          @map("source_id")
+  /// Presentation-only JSON — NEVER written back to the source. Locked keys
+  /// of VERIFIED sources are rejected server-side (§22, §65 test 14).
+  displayOverride Json?       @map("display_override")
+  order      Int
+  visible    Boolean          @default(true)
+
+  cv Cv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId, order])
+  @@map("cv_items")
 }
 
 /// Issued credentials are NEVER deleted (§6) — no deletedAt, FK Restrict.

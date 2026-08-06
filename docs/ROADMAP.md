@@ -36,7 +36,7 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
 ## Phase 3 — CV, letters, applications, sharing
 - **3.1** ✅ Template engine + 10 CV configs; ar/en/fr rendering incl. RTL; per-CV photo
   logic with country recommendation + discouraged-market warning (i18n keys)
-- **3.2** CV items with overrides + verified-field locking (server-side; §65 test 14)
+- **3.2** ✅ CV items with overrides + verified-field locking (server-side; §65 test 14)
 - **3.3** Cover letters: blocks, 5×4 layout/convention matrix
 - **3.4** Server-side PDF pipeline (queue → Chromium → storage → wallet version);
   golden-file PDF regression tests per template × language
