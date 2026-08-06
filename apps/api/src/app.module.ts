@@ -13,6 +13,8 @@ import { RenderModule } from "./modules/render/render.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { ApplicationModule } from "./modules/application/application.module";
 import { ShareModule } from "./modules/share/share.module";
+import { OrganizationsModule } from "./modules/organizations/organizations.module";
+import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -48,6 +50,8 @@ import { PrismaModule } from "./prisma/prisma.module";
     AiModule,
     ApplicationModule,
     ShareModule,
+    OrganizationsModule,
+    NotificationsModule,
   ],
 })
 export class AppModule {}

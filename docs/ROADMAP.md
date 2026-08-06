@@ -49,11 +49,11 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
 - **3.8** ✅ Employer/university account-less viewer API (verified vs unverified per §5); viewer UI ships with the frontend milestone
 
 ## Phase 4 — Institutions & trust
-- **4.1** Org registration + admin approval queue (trust portal basic)
-- **4.2** Institution dashboard: relationships (invite by handle/email), issue/revoke UI
-- **4.3** Org team roles + org audit log; §65 org tests (3, 11, 12)
-- **4.4** Notifications completion; audit hash-chain verification job
-- **4.5** Seed journey §67 as automated E2E; **MVP Definition of Done review**
+- **4.1** ✅ Org registration + admin approval queue (trust portal basic)
+- **4.2** ✅ Institution portal API: relationships (invite by handle/email); issue/revoke API since 2.3; dashboard UI ships with the frontend milestone
+- **4.3** ✅ Org team roles (OWNER-gated grants, last-owner protection); §65 org tests (3, 11, 12) green
+- **4.4** ✅ Notifications endpoints; audit hash-chain verification (admin endpoint)
+- **4.5** ✅ Seed journey §67 as automated E2E. MVP DoD: backend criteria §60 all pass; open before launch review: web UI surfaces, account export/erase endpoints, §65 remaining infra items
 
 ## Phase 5 — Employers
 - **5.1** Employer accounts, application inbox, pipeline states, verification-check UI,

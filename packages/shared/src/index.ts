@@ -560,6 +560,59 @@ export const ApplicationItemsPutSchema = z.object({
 });
 export type ApplicationItemsPutDto = z.infer<typeof ApplicationItemsPutSchema>;
 
+// ---------- Organization DTOs (§43–§44, RBAC) ----------
+
+export const OrganizationTypeSchema = z.enum([
+  "SCHOOL",
+  "UNIVERSITY",
+  "LANGUAGE_SCHOOL",
+  "TRAINING_PROVIDER",
+  "EMPLOYER",
+]);
+
+export const OrgRegisterSchema = z.object({
+  type: OrganizationTypeSchema,
+  name: z.string().trim().min(2).max(200),
+  legalName: z.string().trim().max(200).nullish(),
+  countryCode: CountryCodeSchema,
+  educationSystem: z.string().trim().max(100).nullish(),
+  website: z.string().trim().url().max(300).nullish(),
+});
+export type OrgRegisterDto = z.infer<typeof OrgRegisterSchema>;
+
+export const RelationshipTypeSchema = z.enum([
+  "STUDENT",
+  "ALUMNUS",
+  "EMPLOYEE",
+  "MEMBER",
+]);
+
+/** Invite by handle or email only — never by search (§39/M7). */
+export const OrgRelationshipInviteSchema = z
+  .object({
+    handle: z.string().trim().min(3).max(80).optional(),
+    email: EmailSchema.optional(),
+    type: RelationshipTypeSchema,
+  })
+  .refine((v) => Boolean(v.handle) !== Boolean(v.email), {
+    message: "exactly one of handle or email",
+  });
+export type OrgRelationshipInviteDto = z.infer<typeof OrgRelationshipInviteSchema>;
+
+export const OrganizationRoleSchema = z.enum([
+  "OWNER",
+  "ADMIN",
+  "ISSUER",
+  "RECRUITER",
+  "VIEWER",
+]);
+
+export const OrgInviteMemberSchema = z.object({
+  email: EmailSchema,
+  role: OrganizationRoleSchema,
+});
+export type OrgInviteMemberDto = z.infer<typeof OrgInviteMemberSchema>;
+
 // ---------- Share DTOs (§34–§38) ----------
 
 export const ShareCreateSchema = z
