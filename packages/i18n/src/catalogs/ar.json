@@ -4,5 +4,7 @@
   "common.delete": "حذف",
   "common.share": "مشاركة",
   "verification.verifiedBy": "تم التحقق من قبل {org}",
-  "verification.selfDeclared": "تصريح ذاتي"
+  "verification.selfDeclared": "تصريح ذاتي",
+  "cv.photo.discouragedWarning": "في {country}، غالبًا ما تُستبعد طلبات التوظيف التي تحتوي على صورة. هل تريد استخدامها رغم ذلك؟",
+  "cv.atsUnsafe.label": "غير مناسب لأنظمة التوظيف الآلية (ATS)"
 }

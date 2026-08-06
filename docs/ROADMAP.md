@@ -30,10 +30,12 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
   revoke/supersede with linked replacement, append-only status history, platform
   Ed25519 signing over canonical JSON + public verify endpoint (live status).
   Per-issuer signing keys (credential_issuers) deferred to Phase 4 org portal
-- **2.4** §65 subset: document permissions, upload attacks, credential revocation
+- **2.4** ✅ §65 subset: document permissions, upload attacks, credential revocation
+  (landed inside the 2.1–2.3 test suites)
 
 ## Phase 3 — CV, letters, applications, sharing
-- **3.1** Template engine + 10 CV configs; preview in ar/en/fr; photo logic
+- **3.1** ✅ Template engine + 10 CV configs; ar/en/fr rendering incl. RTL; per-CV photo
+  logic with country recommendation + discouraged-market warning (i18n keys)
 - **3.2** CV items with overrides + verified-field locking (server-side; §65 test 14)
 - **3.3** Cover letters: blocks, 5×4 layout/convention matrix
 - **3.4** Server-side PDF pipeline (queue → Chromium → storage → wallet version);

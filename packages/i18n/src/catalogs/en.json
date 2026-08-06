@@ -4,5 +4,7 @@
   "common.delete": "Delete",
   "common.share": "Share",
   "verification.verifiedBy": "Verified by {org}",
-  "verification.selfDeclared": "Self-declared"
+  "verification.selfDeclared": "Self-declared",
+  "cv.photo.discouragedWarning": "In {country}, applications with a photo are often sorted out. Use it anyway?",
+  "cv.atsUnsafe.label": "Not suitable for automated application systems (ATS)"
 }
