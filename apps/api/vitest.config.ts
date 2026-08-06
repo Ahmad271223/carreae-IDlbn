@@ -40,6 +40,9 @@ export default defineConfig({
       S3_BUCKET_DOCUMENTS: "careerid-test-documents",
       // Test-only key (32 bytes of 'a'); production keys come from a secret manager.
       ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
+      // Test-only Ed25519 signing key — never used outside the test suite.
+      CREDENTIAL_SIGNING_KEY:
+        "-----BEGIN PRIVATE KEY-----\\nMC4CAQAwBQYDK2VwBCIEID6OQAaiN/TsSHxQdurrk/vAvjAWg+zZKvargjhkoYXB\\n-----END PRIVATE KEY-----",
     },
   },
 });

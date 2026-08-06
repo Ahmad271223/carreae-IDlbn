@@ -26,8 +26,10 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
   *Open remainders: scan moves from sync-in-request onto the BullMQ worker when the
   render queue lands (3.4); wallet UI ships with the frontend milestone; object-level
   encryption rides on bucket encryption for now (app-layer envelope later)
-- **2.3** Credential model: issue (internal harness), offer/accept, revoke/supersede,
-  status history, Ed25519 signing + public verify endpoint
+- **2.3** ✅ Credential model: issue via org API (Idempotency-Key), offer/accept/decline,
+  revoke/supersede with linked replacement, append-only status history, platform
+  Ed25519 signing over canonical JSON + public verify endpoint (live status).
+  Per-issuer signing keys (credential_issuers) deferred to Phase 4 org portal
 - **2.4** §65 subset: document permissions, upload attacks, credential revocation
 
 ## Phase 3 — CV, letters, applications, sharing

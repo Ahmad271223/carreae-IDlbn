@@ -56,6 +56,8 @@ export async function createTestApp(): Promise<{
 /** Deletes all rows in FK-safe order — full isolation between test files. */
 export async function resetDatabase(prisma: PrismaService): Promise<void> {
   await prisma.$transaction([
+    prisma.credentialStatusHistory.deleteMany(),
+    prisma.credential.deleteMany(),
     prisma.document.deleteMany(),
     prisma.oauthState.deleteMany(),
     prisma.actionToken.deleteMany(),

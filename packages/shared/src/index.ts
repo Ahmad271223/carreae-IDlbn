@@ -359,6 +359,70 @@ export const UploadIntentSchema = z.object({
 });
 export type UploadIntentDto = z.infer<typeof UploadIntentSchema>;
 
+// ---------- Credential DTOs (§6) ----------
+
+export const CredentialTypeSchema = z.enum([
+  "SCHOOL_LEAVING",
+  "DEGREE",
+  "TRANSCRIPT",
+  "ENROLLMENT",
+  "LANGUAGE",
+  "COURSE",
+  "CERTIFICATE",
+  "EMPLOYMENT",
+]);
+
+/** Flat claim map; scalar values only, bounded size. Type-specific minimums
+ * are enforced below — LANGUAGE credentials must state language and level. */
+export const CredentialPayloadSchema = z
+  .record(
+    z.string().min(1).max(80),
+    z.union([z.string().max(500), z.number(), z.boolean(), z.null()]),
+  )
+  .refine((payload) => Object.keys(payload).length <= 40, "too many fields");
+
+const languagePayloadOk = (
+  type: z.infer<typeof CredentialTypeSchema>,
+  payload: Record<string, unknown>,
+) =>
+  type !== "LANGUAGE" ||
+  (typeof payload.language === "string" && typeof payload.level === "string");
+
+export const IssueCredentialSchema = z
+  .object({
+    /** The subject's Career ID handle — issuing never searches users (§39). */
+    subjectSlug: z.string().trim().min(3).max(80),
+    credentialType: CredentialTypeSchema,
+    payload: CredentialPayloadSchema,
+    countryCode: CountryCodeSchema.optional(),
+    educationSystem: z.string().trim().max(100).optional(),
+    credentialFramework: z.string().trim().max(100).optional(),
+    language: z.string().length(2).optional(),
+    issuedAt: IsoDateSchema.optional(),
+    expiresAt: IsoDateSchema.optional(),
+  })
+  .refine((v) => languagePayloadOk(v.credentialType, v.payload), {
+    message: "LANGUAGE credentials require payload.language and payload.level",
+  });
+export type IssueCredentialDto = z.infer<typeof IssueCredentialSchema>;
+
+export const RevokeCredentialSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
+export type RevokeCredentialDto = z.infer<typeof RevokeCredentialSchema>;
+
+export const SupersedeCredentialSchema = z.object({
+  payload: CredentialPayloadSchema,
+  reason: z.string().trim().max(500).optional(),
+  countryCode: CountryCodeSchema.optional(),
+  educationSystem: z.string().trim().max(100).optional(),
+  credentialFramework: z.string().trim().max(100).optional(),
+  language: z.string().length(2).optional(),
+  issuedAt: IsoDateSchema.optional(),
+  expiresAt: IsoDateSchema.optional(),
+});
+export type SupersedeCredentialDto = z.infer<typeof SupersedeCredentialSchema>;
+
 // ---------- Verification DTOs (§5) ----------
 
 export const VerificationSubjectTypeSchema = z.enum([
