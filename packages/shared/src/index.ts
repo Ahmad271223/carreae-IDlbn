@@ -502,6 +502,15 @@ export const CoverLetterBlocksPutSchema = z.object({
 });
 export type CoverLetterBlocksPutDto = z.infer<typeof CoverLetterBlocksPutSchema>;
 
+// ---------- AI DTOs (§27–§31) ----------
+
+/** Only the job description travels with a draft request — the rest of the
+ * prompt is built server-side from structured Career ID data (§29). */
+export const AiDraftRequestSchema = z.object({
+  jobDescription: z.string().trim().max(10000).optional(),
+});
+export type AiDraftRequestDto = z.infer<typeof AiDraftRequestSchema>;
+
 // ---------- Credential DTOs (§6) ----------
 
 export const CredentialTypeSchema = z.enum([

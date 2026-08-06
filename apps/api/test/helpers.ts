@@ -4,6 +4,11 @@ import { PrismaService } from "../src/prisma/prisma.service";
 import { configureApp } from "../src/app.setup";
 import { Mailer } from "../src/modules/mail/mailer";
 import { SCANNER, Scanner, type ScanVerdict } from "../src/modules/documents/scanner";
+import {
+  AI_PROVIDER,
+  AIProvider,
+  type CompletionRequest,
+} from "../src/modules/ai/ai-provider";
 
 export interface CapturedMail {
   to: string;
@@ -33,24 +38,39 @@ export class FakeScanner extends Scanner {
   }
 }
 
+/** Deterministic LLM double: queued responses, full call capture for §31 checks. */
+export class FakeAIProvider extends AIProvider {
+  readonly calls: CompletionRequest[] = [];
+  readonly responses: string[] = [];
+
+  async complete(request: CompletionRequest): Promise<string> {
+    this.calls.push(request);
+    return this.responses.shift() ?? "Draft paragraph text.";
+  }
+}
+
 export async function createTestApp(): Promise<{
   app: INestApplication;
   mailer: FakeMailer;
   prisma: PrismaService;
+  aiProvider: FakeAIProvider;
 }> {
   // Import after env is settled so decorator-time config reads test values.
   const { AppModule } = await import("../src/app.module");
   const mailer = new FakeMailer();
+  const aiProvider = new FakeAIProvider();
   const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
     .overrideProvider(Mailer)
     .useValue(mailer)
     .overrideProvider(SCANNER)
     .useValue(new FakeScanner())
+    .overrideProvider(AI_PROVIDER)
+    .useValue(aiProvider)
     .compile();
   const app = moduleRef.createNestApplication();
   configureApp(app);
   await app.init();
-  return { app, mailer, prisma: app.get(PrismaService) };
+  return { app, mailer, prisma: app.get(PrismaService), aiProvider };
 }
 
 /** Deletes all rows in FK-safe order — full isolation between test files. */

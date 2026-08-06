@@ -41,7 +41,7 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
 - **3.4** ✅ Server-side PDF pipeline (BullMQ queue → Playwright/Chromium → storage →
   wallet version chain); PDF regression tests assert real text layer, versioning,
   RTL and convention content per template × language
-- **3.5** AI drafts: provider interface, draft/adopt flow, origin tracking, entity
+- **3.5** ✅ AI drafts: provider interface, draft/adopt flow, origin tracking, entity
   validator, back-translation
 - **3.6** Applications composer
 - **3.7** Share system: tokens, options, revoke, projection serializer, access log,

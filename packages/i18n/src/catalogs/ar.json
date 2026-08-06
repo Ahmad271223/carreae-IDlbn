@@ -13,5 +13,7 @@
   "cv.section.languages": "اللغات",
   "cv.section.skills": "المهارات",
   "cv.section.certificates": "الشهادات",
-  "cv.section.references": "المراجع"
+  "cv.section.references": "المراجع",
+  "ai.notInProfile": "هذه المعلومة غير موجودة في ملفك الشخصي",
+  "ai.backTranslation.hint": "هذه الرسالة مكتوبة بمستوى أعلى من مستواك الموثّق في هذه اللغة. قد يظهر الفرق الكبير في المقابلة — راجع الترجمة العكسية بعناية."
 }

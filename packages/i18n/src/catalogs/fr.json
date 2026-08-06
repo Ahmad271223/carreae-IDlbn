@@ -13,5 +13,7 @@
   "cv.section.languages": "Langues",
   "cv.section.skills": "Compétences",
   "cv.section.certificates": "Certificats",
-  "cv.section.references": "Références"
+  "cv.section.references": "Références",
+  "ai.notInProfile": "Cette information ne figure pas dans votre profil",
+  "ai.backTranslation.hint": "Cette lettre est rédigée à un niveau supérieur à votre niveau documenté dans cette langue. Un grand écart peut se remarquer en entretien — vérifiez attentivement la rétrotraduction."
 }

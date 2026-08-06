@@ -10,6 +10,7 @@ import { CredentialsModule } from "./modules/credentials/credentials.module";
 import { CvModule } from "./modules/cv/cv.module";
 import { CoverLetterModule } from "./modules/cover-letter/cover-letter.module";
 import { RenderModule } from "./modules/render/render.module";
+import { AiModule } from "./modules/ai/ai.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -42,6 +43,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     CvModule,
     CoverLetterModule,
     RenderModule,
+    AiModule,
   ],
 })
 export class AppModule {}

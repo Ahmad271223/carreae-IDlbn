@@ -13,5 +13,7 @@
   "cv.section.languages": "Languages",
   "cv.section.skills": "Skills",
   "cv.section.certificates": "Certificates",
-  "cv.section.references": "References"
+  "cv.section.references": "References",
+  "ai.notInProfile": "This statement is not in your profile",
+  "ai.backTranslation.hint": "This letter is written above your documented level in this language. A large gap can stand out in an interview — review the back-translation carefully."
 }
