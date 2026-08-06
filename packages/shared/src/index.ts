@@ -439,6 +439,67 @@ export const CvItemsPutSchema = z.object({
 });
 export type CvItemsPutDto = z.infer<typeof CvItemsPutSchema>;
 
+// ---------- Cover letter DTOs (§23–§24) ----------
+
+export const CoverLetterConventionSchema = z.enum(["DE", "FR", "EN", "AR"]);
+export const LetterLayoutSchema = z.enum([
+  "classic",
+  "modern",
+  "compact",
+  "academic",
+  "sidebar",
+]);
+export const CoverLetterBlockTypeSchema = z.enum([
+  "RECIPIENT",
+  "SUBJECT",
+  "SALUTATION",
+  "OPENING",
+  "BODY",
+  "CLOSING",
+  "SIGNATURE",
+]);
+
+export const CoverLetterCreateSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+  layoutTemplate: LetterLayoutSchema,
+  convention: CoverLetterConventionSchema,
+  /** Letter language may exceed platform locales (e.g. "de"). */
+  language: z
+    .string()
+    .length(2)
+    .regex(/^[a-z]{2}$/),
+});
+export type CoverLetterCreateDto = z.infer<typeof CoverLetterCreateSchema>;
+
+export const CoverLetterUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(120),
+    layoutTemplate: LetterLayoutSchema,
+    convention: CoverLetterConventionSchema,
+    language: z
+      .string()
+      .length(2)
+      .regex(/^[a-z]{2}$/),
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type CoverLetterUpdateDto = z.infer<typeof CoverLetterUpdateSchema>;
+
+export const CoverLetterBlocksPutSchema = z.object({
+  blocks: z
+    .array(
+      z.object({
+        /** Existing block id — preserves origin tracking across edits (§28). */
+        id: z.string().uuid().optional(),
+        type: CoverLetterBlockTypeSchema,
+        order: z.number().int().min(0),
+        content: z.string().max(6000),
+      }),
+    )
+    .max(30),
+});
+export type CoverLetterBlocksPutDto = z.infer<typeof CoverLetterBlocksPutSchema>;
+
 // ---------- Credential DTOs (§6) ----------
 
 export const CredentialTypeSchema = z.enum([

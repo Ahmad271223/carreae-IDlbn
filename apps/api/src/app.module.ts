@@ -8,6 +8,7 @@ import { VerificationModule } from "./modules/verification/verification.module";
 import { DocumentsModule } from "./modules/documents/documents.module";
 import { CredentialsModule } from "./modules/credentials/credentials.module";
 import { CvModule } from "./modules/cv/cv.module";
+import { CoverLetterModule } from "./modules/cover-letter/cover-letter.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -38,6 +39,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     DocumentsModule,
     CredentialsModule,
     CvModule,
+    CoverLetterModule,
   ],
 })
 export class AppModule {}

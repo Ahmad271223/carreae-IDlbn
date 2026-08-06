@@ -161,6 +161,29 @@ enum CredentialStatus {
   SUPERSEDED
 }
 
+enum CoverLetterConvention {
+  DE
+  FR
+  EN
+  AR
+}
+
+enum CoverLetterBlockType {
+  RECIPIENT
+  SUBJECT
+  SALUTATION
+  OPENING
+  BODY
+  CLOSING
+  SIGNATURE
+}
+
+enum BlockOrigin {
+  USER
+  AI_GENERATED
+  AI_EDITED
+}
+
 enum CvItemSourceType {
   EXPERIENCE
   EDUCATION
@@ -235,6 +258,7 @@ model User {
   documents            Document[]
   credentials          Credential[]               @relation("CredentialSubject")
   cvs                  Cv[]
+  coverLetters         CoverLetter[]
 
   @@map("users")
 }
@@ -563,6 +587,49 @@ model CvItem {
 
   @@index([cvId, order])
   @@map("cv_items")
+}
+
+/// Cover letters vary by country convention, not by design (§23): the layout
+/// axis reuses the CV template look; the convention axis (DE/FR/EN/AR)
+/// controls the letter's structural norm.
+model CoverLetter {
+  id             String                @id @default(uuid(7))
+  userId         String                @map("user_id")
+  title          String
+  /// FK to applications lands with milestone 3.6.
+  applicationId  String?               @map("application_id")
+  layoutTemplate String                @map("layout_template")
+  convention     CoverLetterConvention
+  /// The letter's language (ISO 639-1) — may exceed platform locales, e.g. "de".
+  language       String
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  deletedAt      DateTime?             @map("deleted_at")
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  blocks CoverLetterBlock[]
+
+  @@index([userId])
+  @@map("cover_letters")
+}
+
+/// Block granularity (§24) so single paragraphs can be regenerated, and
+/// origin tracking (§28): AI output never lands in content directly —
+/// draft_content is the staging field, promotion is an explicit user act.
+model CoverLetterBlock {
+  id            String               @id @default(uuid(7))
+  coverLetterId String               @map("cover_letter_id")
+  type          CoverLetterBlockType
+  order         Int
+  content       String               @default("")
+  draftContent  String?              @map("draft_content")
+  origin        BlockOrigin          @default(USER)
+  updatedAt     DateTime             @updatedAt @map("updated_at")
+
+  coverLetter CoverLetter @relation(fields: [coverLetterId], references: [id], onDelete: Cascade)
+
+  @@index([coverLetterId, order])
+  @@map("cover_letter_blocks")
 }
 
 /// Issued credentials are NEVER deleted (§6) — no deletedAt, FK Restrict.
