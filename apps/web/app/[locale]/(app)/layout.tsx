@@ -14,6 +14,7 @@ const NAV = [
   ["letters", "nav.letters"],
   ["credentials", "nav.credentials"],
   ["applications", "nav.applications"],
+  ["notifications", "nav.notifications"],
 ] as const;
 
 export default function AppShell({ children }: { children: ReactNode }) {

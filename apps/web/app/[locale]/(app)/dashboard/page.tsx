@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { api } from "../../../../lib/api";
 import { useT } from "../../../../lib/i18n-client";
 import { Card } from "../../../../components/ui";
@@ -16,7 +17,7 @@ interface Notification {
 }
 
 export default function DashboardPage() {
-  const { t } = useT();
+  const { locale, t } = useT();
   const [completion, setCompletion] = useState<Completion | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
@@ -43,7 +44,17 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500">{t("common.loading")}</p>
         )}
       </Card>
-      <Card title={t("dashboard.notifications")}>
+      <Card
+        title={t("dashboard.notifications")}
+        actions={
+          <Link
+            href={`/${locale}/notifications`}
+            className="text-xs text-brand hover:underline"
+          >
+            {t("dashboard.viewAll")}
+          </Link>
+        }
+      >
         {notifications.length === 0 ? (
           <p className="text-sm text-gray-500">{t("common.none")}</p>
         ) : (
