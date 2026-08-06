@@ -4,7 +4,10 @@ RUN corepack enable
 WORKDIR /repo
 COPY . .
 RUN pnpm install --frozen-lockfile
-ENV NEXT_OUTPUT=standalone
+# Inlined into the client bundle at build time — set to the public API origin.
+ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL} \
+    NEXT_OUTPUT=standalone
 RUN pnpm --filter @careerid/web... build
 
 FROM node:22-bookworm-slim

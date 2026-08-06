@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+/* Design tokens from @careerid/ui — §5: verified gets the positive accent,
+   unverified stays neutral, never error-styled. */
+@theme {
+  --color-brand: #1e3a5f;
+  --color-verified: #0f766e;
+  --color-neutral-badge: #6b7280;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+}

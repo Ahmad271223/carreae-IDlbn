@@ -1,0 +1,212 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { api } from "../../../../lib/api";
+import { useT } from "../../../../lib/i18n-client";
+import { Button, Card, ErrorText, Field, Input } from "../../../../components/ui";
+
+interface Template {
+  key: string;
+  name: string;
+  atsSafe: boolean;
+  photoSlot: string;
+}
+interface Cv {
+  id: string;
+  title: string;
+  templateKey: string;
+  language: string;
+}
+
+export default function CvsPage() {
+  const { locale, t } = useT();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [cvs, setCvs] = useState<Cv[]>([]);
+  const [title, setTitle] = useState("");
+  const [templateKey, setTemplateKey] = useState("classic");
+  const [targetCountry, setTargetCountry] = useState("");
+  const [warning, setWarning] = useState("");
+  const [error, setError] = useState("");
+  const [rendering, setRendering] = useState<string | null>(null);
+
+  const reload = useCallback(() => {
+    api<Cv[]>("/cvs").then(setCvs).catch(() => undefined);
+  }, []);
+  useEffect(() => {
+    api<Template[]>("/cvs/templates").then(setTemplates).catch(() => undefined);
+    reload();
+  }, [reload]);
+
+  async function create(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setWarning("");
+    try {
+      const result = await api<{
+        cv: Cv;
+        photoRecommendation: { warningKey?: string };
+      }>("/cvs", {
+        method: "POST",
+        body: {
+          title,
+          templateKey,
+          language: locale,
+          targetCountryCode: targetCountry || undefined,
+        },
+      });
+      // §20: discouraged markets warn — the user always decides.
+      if (result.photoRecommendation.warningKey) {
+        setWarning(
+          t(result.photoRecommendation.warningKey, {
+            country: targetCountry.toUpperCase(),
+          }),
+        );
+      }
+      // Pull the whole Career ID into the CV (§7.8 — reference, never copy).
+      const [educations, experiences, languages, skills] = await Promise.all([
+        api<Array<{ id: string }>>("/educations"),
+        api<Array<{ id: string }>>("/experiences"),
+        api<Array<{ id: string }>>("/languages"),
+        api<Array<{ id: string }>>("/skills"),
+      ]);
+      const items = [
+        ...experiences.map((e, i) => ({
+          sourceType: "EXPERIENCE",
+          sourceId: e.id,
+          order: i,
+          visible: true,
+        })),
+        ...educations.map((e, i) => ({
+          sourceType: "EDUCATION",
+          sourceId: e.id,
+          order: 100 + i,
+          visible: true,
+        })),
+        ...languages.map((e, i) => ({
+          sourceType: "LANGUAGE",
+          sourceId: e.id,
+          order: 200 + i,
+          visible: true,
+        })),
+        ...skills.map((e, i) => ({
+          sourceType: "SKILL",
+          sourceId: e.id,
+          order: 300 + i,
+          visible: true,
+        })),
+      ];
+      await api(`/cvs/${result.cv.id}/items`, { method: "PUT", body: { items } });
+      setTitle("");
+      reload();
+    } catch {
+      setError(t("common.error"));
+    }
+  }
+
+  async function render(cvId: string) {
+    setRendering(cvId);
+    setError("");
+    try {
+      const job = await api<{ jobId: string }>(`/cvs/${cvId}/render`, {
+        method: "POST",
+      });
+      for (let i = 0; i < 60; i++) {
+        const status = await api<{ status: string; documentId?: string }>(
+          `/render-jobs/${job.jobId}`,
+        );
+        if (status.status === "SUCCEEDED" && status.documentId) {
+          const { url } = await api<{ url: string }>(
+            `/documents/${status.documentId}/download`,
+          );
+          window.open(url, "_blank", "noopener");
+          return;
+        }
+        if (status.status === "FAILED") throw new Error("render failed");
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+      throw new Error("timeout");
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setRendering(null);
+    }
+  }
+
+  return (
+    <>
+      <h1 className="text-2xl font-bold">{t("cv.title")}</h1>
+      <Card title={t("cv.create")}>
+        <form onSubmit={create} className="flex flex-wrap items-end gap-3">
+          <div className="min-w-48 flex-1">
+            <Field label={t("apps.appTitle")}>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                required
+              />
+            </Field>
+          </div>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium text-gray-700">
+              {t("cv.template")}
+            </span>
+            <select
+              value={templateKey}
+              onChange={(e) => setTemplateKey(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+            >
+              {templates.map((tpl) => (
+                <option key={tpl.key} value={tpl.key}>
+                  {/* §19: ATS-unsafe templates are labeled honestly. */}
+                  {tpl.name}
+                  {tpl.atsSafe ? "" : ` — ${t("cv.atsUnsafe.label")}`}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="w-28">
+            <Field label={t("cv.targetCountry")}>
+              <Input
+                value={targetCountry}
+                maxLength={2}
+                placeholder="DE"
+                onChange={(e) => setTargetCountry(e.target.value.toUpperCase())}
+              />
+            </Field>
+          </div>
+          <Button type="submit">{t("cv.create")}</Button>
+        </form>
+        <p className="mt-2 text-xs text-gray-500">{t("cv.includeAll")}</p>
+        {warning && <p className="mt-2 text-sm text-amber-700">{warning}</p>}
+        <ErrorText>{error}</ErrorText>
+      </Card>
+      <Card title={t("cv.title")}>
+        {cvs.length === 0 ? (
+          <p className="text-sm text-gray-500">{t("common.none")}</p>
+        ) : (
+          <ul className="space-y-1">
+            {cvs.map((cv) => (
+              <li
+                key={cv.id}
+                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+              >
+                <span>
+                  {cv.title}
+                  <span className="ms-2 text-xs text-gray-400">
+                    {cv.templateKey} · {cv.language}
+                  </span>
+                </span>
+                <Button
+                  variant="secondary"
+                  disabled={rendering === cv.id}
+                  onClick={() => render(cv.id)}
+                >
+                  {rendering === cv.id ? t("cv.rendering") : t("cv.render")}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </>
+  );
+}
