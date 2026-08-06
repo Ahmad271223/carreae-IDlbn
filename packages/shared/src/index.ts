@@ -502,6 +502,64 @@ export const CoverLetterBlocksPutSchema = z.object({
 });
 export type CoverLetterBlocksPutDto = z.infer<typeof CoverLetterBlocksPutSchema>;
 
+// ---------- Application DTOs (§7.10) ----------
+
+export const ApplicationTypeSchema = z.enum(["JOB", "UNIVERSITY", "GENERAL"]);
+export const ApplicationStatusSchema = z.enum(["DRAFT", "SENT"]);
+
+export const ApplicationCreateSchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  type: ApplicationTypeSchema,
+  recipientName: z.string().trim().max(200).nullish(),
+  /** May contain third-party data — lives only as long as the application (P4). */
+  jobDescription: z.string().trim().max(10000).nullish(),
+});
+export type ApplicationCreateDto = z.infer<typeof ApplicationCreateSchema>;
+
+export const ApplicationUpdateSchema = z
+  .object({
+    title: z.string().trim().min(1).max(160),
+    recipientName: z.string().trim().max(200).nullable(),
+    jobDescription: z.string().trim().max(10000).nullable(),
+    status: ApplicationStatusSchema,
+  })
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, { message: "empty update" });
+export type ApplicationUpdateDto = z.infer<typeof ApplicationUpdateSchema>;
+
+export const ApplicationItemTypeSchema = z.enum([
+  "CV",
+  "COVER_LETTER",
+  "DOCUMENT",
+  "CREDENTIAL",
+  "REFERENCE",
+  "PORTFOLIO",
+  "SECTION",
+]);
+
+/** Structured profile sections attachable to an application package. */
+export const ApplicationSectionKeySchema = z.enum([
+  "profile",
+  "experience",
+  "education",
+  "languages",
+  "skills",
+]);
+
+export const ApplicationItemsPutSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        itemType: ApplicationItemTypeSchema,
+        /** Artifact id (uuid) — or the section key for SECTION items. */
+        itemId: z.string().min(1).max(64),
+        order: z.number().int().min(0),
+      }),
+    )
+    .max(50),
+});
+export type ApplicationItemsPutDto = z.infer<typeof ApplicationItemsPutSchema>;
+
 // ---------- AI DTOs (§27–§31) ----------
 
 /** Only the job description travels with a draft request — the rest of the

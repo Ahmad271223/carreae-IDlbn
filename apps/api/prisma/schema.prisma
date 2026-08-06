@@ -173,6 +173,27 @@ enum RenderJobStatus {
   FAILED
 }
 
+enum ApplicationType {
+  JOB
+  UNIVERSITY
+  GENERAL
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SENT
+}
+
+enum ApplicationItemType {
+  CV
+  COVER_LETTER
+  DOCUMENT
+  CREDENTIAL
+  REFERENCE
+  PORTFOLIO
+  SECTION
+}
+
 enum CoverLetterConvention {
   DE
   FR
@@ -271,6 +292,7 @@ model User {
   credentials          Credential[]               @relation("CredentialSubject")
   cvs                  Cv[]
   coverLetters         CoverLetter[]
+  applications         Application[]
 
   @@map("users")
 }
@@ -631,6 +653,42 @@ model RenderJob {
 
   @@index([userId, createdAt])
   @@map("render_jobs")
+}
+
+/// An application is a composed package of Career ID artifacts (§7.10). The
+/// pasted job description may contain third-party data — it lives only as
+/// long as the application and is nulled on delete (P4).
+model Application {
+  id             String            @id @default(uuid(7))
+  userId         String            @map("user_id")
+  title          String
+  type           ApplicationType
+  recipientName  String?           @map("recipient_name")
+  jobDescription String?           @map("job_description")
+  status         ApplicationStatus @default(DRAFT)
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  deletedAt      DateTime?         @map("deleted_at")
+
+  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items ApplicationItem[]
+
+  @@index([userId])
+  @@map("applications")
+}
+
+model ApplicationItem {
+  id            String              @id @default(uuid(7))
+  applicationId String              @map("application_id")
+  itemType      ApplicationItemType @map("item_type")
+  /// Referenced artifact id; for SECTION items the section key instead.
+  itemId        String              @map("item_id")
+  order         Int
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, order])
+  @@map("application_items")
 }
 
 /// Cover letters vary by country convention, not by design (§23): the layout

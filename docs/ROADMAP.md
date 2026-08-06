@@ -43,7 +43,7 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
   RTL and convention content per template × language
 - **3.5** ✅ AI drafts: provider interface, draft/adopt flow, origin tracking, entity
   validator, back-translation
-- **3.6** Applications composer
+- **3.6** ✅ Applications composer
 - **3.7** Share system: tokens, options, revoke, projection serializer, access log,
   QR, consent — §65 share/leakage tests green (tests 4,5,6,13)
 - **3.8** Employer/university account-less viewer (verified vs unverified UX per §5)

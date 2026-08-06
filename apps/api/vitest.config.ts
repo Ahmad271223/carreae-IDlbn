@@ -22,8 +22,14 @@ export default defineConfig({
     globalSetup: "./test/global-setup.ts",
     // Integration tests share one database — no cross-file parallelism.
     fileParallelism: false,
+    // One long-lived worker process: per-file fork teardown on Windows races
+    // against lingering BullMQ/Chromium handles (ERR_IPC_CHANNEL_CLOSED).
+    pool: "forks",
+    poolOptions: { forks: { singleFork: true } },
     hookTimeout: 60_000,
-    testTimeout: 30_000,
+    // Generous: the full suite shares one machine with Chromium, Postgres,
+    // MinIO and Redis — transient stalls must not read as test failures.
+    testTimeout: 60_000,
     env: {
       DATABASE_URL: TEST_DATABASE_URL,
       NODE_ENV: "test",
@@ -39,6 +45,10 @@ export default defineConfig({
       S3_BUCKET_QUARANTINE: "careerid-test-quarantine",
       S3_BUCKET_DOCUMENTS: "careerid-test-documents",
       REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
+      // Test-only: memory-hard hashing at production cost (64MB/hash) starves
+      // the suite when the render pipeline runs alongside; 8MB keeps the
+      // algorithm identical while removing the contention.
+      ARGON2_MEMORY_KIB: "8192",
       // Test-only key (32 bytes of 'a'); production keys come from a secret manager.
       ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
       // Test-only Ed25519 signing key — never used outside the test suite.
