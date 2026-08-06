@@ -24,6 +24,8 @@ interface VerificationRequest {
   organizationName: string;
 }
 interface Relationship {
+  id: string;
+  type: string;
   organizationId: string;
   organizationName: string;
   status: string;
@@ -52,10 +54,20 @@ export default function ProfilePage() {
       .then(setVerifications)
       .catch(() => undefined);
     api<Relationship[]>("/relationships")
-      .then((rows) => setRelationships(rows.filter((r) => r.status === "ACTIVE")))
+      .then(setRelationships)
       .catch(() => undefined);
   }, []);
   useEffect(reload, [reload]);
+
+  async function respondRelationship(id: string, action: "accept" | "decline") {
+    await api(`/relationships/${id}/${action}`, { method: "POST" }).catch(
+      () => undefined,
+    );
+    reload();
+  }
+
+  const activeRelationships = relationships.filter((r) => r.status === "ACTIVE");
+  const invitedRelationships = relationships.filter((r) => r.status === "INVITED");
 
   async function requestVerification(
     subjectType: string,
@@ -95,7 +107,7 @@ export default function ProfilePage() {
         requests={verifications.filter(
           (v) => v.subjectType === subjectType && v.subjectId === id,
         )}
-        relationships={relationships}
+        relationships={activeRelationships}
         onRequest={requestVerification}
         onRevoke={revokeVerification}
       />
@@ -165,6 +177,37 @@ export default function ProfilePage() {
           </div>
         </form>
       </Card>
+
+      {invitedRelationships.length > 0 && (
+        <Card title={t("relationship.invitations")}>
+          <ul className="space-y-1">
+            {invitedRelationships.map((r) => (
+              <li
+                key={r.id}
+                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+              >
+                <span>
+                  {t("relationship.invitedBy", { org: r.organizationName })}
+                  <span className="ms-2 text-xs text-gray-400">
+                    {t(`org.relType.${r.type}`)}
+                  </span>
+                </span>
+                <span className="flex gap-2">
+                  <Button onClick={() => respondRelationship(r.id, "accept")}>
+                    {t("relationship.accept")}
+                  </Button>
+                  <Button
+                    variant="danger"
+                    onClick={() => respondRelationship(r.id, "decline")}
+                  >
+                    {t("relationship.decline")}
+                  </Button>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card title={t("career.education")}>
         <EntryList
