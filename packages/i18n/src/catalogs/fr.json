@@ -6,5 +6,12 @@
   "verification.verifiedBy": "Vérifié par {org}",
   "verification.selfDeclared": "Déclaration personnelle",
   "cv.photo.discouragedWarning": "En {country}, les candidatures avec photo sont souvent écartées. L'utiliser quand même ?",
-  "cv.atsUnsafe.label": "Non adapté aux systèmes de candidature automatisés (ATS)"
+  "cv.atsUnsafe.label": "Non adapté aux systèmes de candidature automatisés (ATS)",
+  "cv.section.profile": "Profil",
+  "cv.section.experience": "Expérience",
+  "cv.section.education": "Formation",
+  "cv.section.languages": "Langues",
+  "cv.section.skills": "Compétences",
+  "cv.section.certificates": "Certificats",
+  "cv.section.references": "Références"
 }

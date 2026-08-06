@@ -9,6 +9,7 @@ import { DocumentsModule } from "./modules/documents/documents.module";
 import { CredentialsModule } from "./modules/credentials/credentials.module";
 import { CvModule } from "./modules/cv/cv.module";
 import { CoverLetterModule } from "./modules/cover-letter/cover-letter.module";
+import { RenderModule } from "./modules/render/render.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -40,6 +41,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     CredentialsModule,
     CvModule,
     CoverLetterModule,
+    RenderModule,
   ],
 })
 export class AppModule {}

@@ -28,6 +28,20 @@ export class ProfileService {
 
   /** Upsert; the slug is minted on first save of a complete name. */
   async update(userId: string, dto: ProfileUpdateDto): Promise<Profile> {
+    if (dto.photoDocumentId) {
+      // Only an own, clean, image-category wallet document can be the photo.
+      const photo = await this.prisma.document.findFirst({
+        where: {
+          id: dto.photoDocumentId,
+          ownerUserId: userId,
+          category: "PHOTO",
+          scanStatus: "CLEAN",
+          deletedAt: null,
+        },
+        select: { id: true },
+      });
+      if (!photo) throw new NotFoundException({ code: "PHOTO_NOT_FOUND" });
+    }
     const existing = await this.prisma.profile.findUnique({ where: { userId } });
 
     if (!existing) {

@@ -38,8 +38,9 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
   logic with country recommendation + discouraged-market warning (i18n keys)
 - **3.2** ✅ CV items with overrides + verified-field locking (server-side; §65 test 14)
 - **3.3** ✅ Cover letters: blocks, 5×4 layout/convention matrix
-- **3.4** Server-side PDF pipeline (queue → Chromium → storage → wallet version);
-  golden-file PDF regression tests per template × language
+- **3.4** ✅ Server-side PDF pipeline (BullMQ queue → Playwright/Chromium → storage →
+  wallet version chain); PDF regression tests assert real text layer, versioning,
+  RTL and convention content per template × language
 - **3.5** AI drafts: provider interface, draft/adopt flow, origin tracking, entity
   validator, back-translation
 - **3.6** Applications composer

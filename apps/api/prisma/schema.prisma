@@ -161,6 +161,18 @@ enum CredentialStatus {
   SUPERSEDED
 }
 
+enum RenderSourceType {
+  CV
+  COVER_LETTER
+}
+
+enum RenderJobStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
 enum CoverLetterConvention {
   DE
   FR
@@ -587,6 +599,38 @@ model CvItem {
 
   @@index([cvId, order])
   @@map("cv_items")
+}
+
+/// Every render creates a NEW immutable version (§26) — a CV already sent to
+/// an employer must stay reconstructable. A generated file is never a
+/// credential; badges live on entries, not on the document (§26).
+model DocumentVersion {
+  id          String           @id @default(uuid(7))
+  sourceType  RenderSourceType @map("source_type")
+  sourceId    String           @map("source_id")
+  documentId  String           @map("document_id")
+  templateKey String           @map("template_key")
+  language    String
+  renderedAt  DateTime         @default(now()) @map("rendered_at")
+
+  @@index([sourceType, sourceId, renderedAt])
+  @@map("document_versions")
+}
+
+/// Async render bookkeeping — ownership-checked job status for polling.
+model RenderJob {
+  id         String           @id @default(uuid(7))
+  userId     String           @map("user_id")
+  sourceType RenderSourceType @map("source_type")
+  sourceId   String           @map("source_id")
+  status     RenderJobStatus  @default(QUEUED)
+  documentId String?          @map("document_id")
+  error      String?
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+
+  @@index([userId, createdAt])
+  @@map("render_jobs")
 }
 
 /// Cover letters vary by country convention, not by design (§23): the layout

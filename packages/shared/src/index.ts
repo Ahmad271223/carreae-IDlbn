@@ -195,6 +195,8 @@ export const ProfileUpdateSchema = z
     desiredRole: z.string().trim().max(200).nullish(),
     city: z.string().trim().max(120).nullish(),
     countryCode: CountryCodeSchema.nullish(),
+    /** Wallet document id (category PHOTO, scanned CLEAN) — validated server-side. */
+    photoDocumentId: z.string().uuid().nullish(),
   })
   .partial()
   .refine((v) => Object.keys(v).length > 0, { message: "empty update" });

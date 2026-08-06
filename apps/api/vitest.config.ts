@@ -38,6 +38,7 @@ export default defineConfig({
       S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? "careerid-dev-secret",
       S3_BUCKET_QUARANTINE: "careerid-test-quarantine",
       S3_BUCKET_DOCUMENTS: "careerid-test-documents",
+      REDIS_URL: process.env.REDIS_URL ?? "redis://localhost:6379",
       // Test-only key (32 bytes of 'a'); production keys come from a secret manager.
       ENCRYPTION_KEY: "YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=",
       // Test-only Ed25519 signing key — never used outside the test suite.

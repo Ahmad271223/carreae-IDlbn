@@ -6,5 +6,12 @@
   "verification.verifiedBy": "تم التحقق من قبل {org}",
   "verification.selfDeclared": "تصريح ذاتي",
   "cv.photo.discouragedWarning": "في {country}، غالبًا ما تُستبعد طلبات التوظيف التي تحتوي على صورة. هل تريد استخدامها رغم ذلك؟",
-  "cv.atsUnsafe.label": "غير مناسب لأنظمة التوظيف الآلية (ATS)"
+  "cv.atsUnsafe.label": "غير مناسب لأنظمة التوظيف الآلية (ATS)",
+  "cv.section.profile": "الملف الشخصي",
+  "cv.section.experience": "الخبرة المهنية",
+  "cv.section.education": "التعليم",
+  "cv.section.languages": "اللغات",
+  "cv.section.skills": "المهارات",
+  "cv.section.certificates": "الشهادات",
+  "cv.section.references": "المراجع"
 }

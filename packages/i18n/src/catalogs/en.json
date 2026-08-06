@@ -6,5 +6,12 @@
   "verification.verifiedBy": "Verified by {org}",
   "verification.selfDeclared": "Self-declared",
   "cv.photo.discouragedWarning": "In {country}, applications with a photo are often sorted out. Use it anyway?",
-  "cv.atsUnsafe.label": "Not suitable for automated application systems (ATS)"
+  "cv.atsUnsafe.label": "Not suitable for automated application systems (ATS)",
+  "cv.section.profile": "Profile",
+  "cv.section.experience": "Experience",
+  "cv.section.education": "Education",
+  "cv.section.languages": "Languages",
+  "cv.section.skills": "Skills",
+  "cv.section.certificates": "Certificates",
+  "cv.section.references": "References"
 }
