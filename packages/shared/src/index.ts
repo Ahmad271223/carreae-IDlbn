@@ -560,6 +560,20 @@ export const ApplicationItemsPutSchema = z.object({
 });
 export type ApplicationItemsPutDto = z.infer<typeof ApplicationItemsPutSchema>;
 
+// ---------- Share DTOs (§34–§38) ----------
+
+export const ShareCreateSchema = z
+  .object({
+    /** Days until expiry; null = no expiry; default 7 (§35). */
+    expiresInDays: z.number().int().min(1).max(365).nullable(),
+    expireOnFirstView: z.boolean(),
+    downloadAllowed: z.boolean(),
+    viewLimit: z.number().int().min(1).max(1000),
+    pin: z.string().trim().min(4).max(32),
+  })
+  .partial();
+export type ShareCreateDto = z.infer<typeof ShareCreateSchema>;
+
 // ---------- AI DTOs (§27–§31) ----------
 
 /** Only the job description travels with a draft request — the rest of the

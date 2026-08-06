@@ -12,6 +12,7 @@ import { CoverLetterModule } from "./modules/cover-letter/cover-letter.module";
 import { RenderModule } from "./modules/render/render.module";
 import { AiModule } from "./modules/ai/ai.module";
 import { ApplicationModule } from "./modules/application/application.module";
+import { ShareModule } from "./modules/share/share.module";
 import { PrismaModule } from "./prisma/prisma.module";
 
 /**
@@ -46,6 +47,7 @@ import { PrismaModule } from "./prisma/prisma.module";
     RenderModule,
     AiModule,
     ApplicationModule,
+    ShareModule,
   ],
 })
 export class AppModule {}

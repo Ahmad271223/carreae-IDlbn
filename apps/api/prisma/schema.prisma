@@ -173,6 +173,11 @@ enum RenderJobStatus {
   FAILED
 }
 
+enum PlatformRole {
+  USER
+  ADMIN
+}
+
 enum ApplicationType {
   JOB
   UNIVERSITY
@@ -269,6 +274,8 @@ model User {
   passwordHash    String?    @map("password_hash")
   status          UserStatus @default(ACTIVE)
   mfaEnabled      Boolean    @default(false) @map("mfa_enabled")
+  /// Operator staff only — never self-assignable (RBAC.md).
+  platformRole    PlatformRole @default(USER) @map("platform_role")
   locale          String     @default("en")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
@@ -293,6 +300,8 @@ model User {
   cvs                  Cv[]
   coverLetters         CoverLetter[]
   applications         Application[]
+  sharePackages        SharePackage[]
+  consents             Consent[]
 
   @@map("users")
 }
@@ -689,6 +698,62 @@ model ApplicationItem {
 
   @@index([applicationId, order])
   @@map("application_items")
+}
+
+/// Secure share link (§35): the token (≥128-bit CSPRNG) is stored hashed;
+/// revocation is server-side and immediate. Verification badges are NEVER
+/// frozen — the viewer resolves them live at view time (§34).
+model SharePackage {
+  id              String    @id @default(uuid(7))
+  userId          String    @map("user_id")
+  applicationId   String    @map("application_id")
+  tokenHash       String    @unique @map("token_hash")
+  downloadAllowed Boolean   @default(true) @map("download_allowed")
+  viewLimit       Int?      @map("view_limit")
+  viewCount       Int       @default(0) @map("view_count")
+  pinHash         String?   @map("pin_hash")
+  expiresAt       DateTime? @map("expires_at")
+  revokedAt       DateTime? @map("revoked_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessLogs ShareAccessLog[]
+
+  @@index([userId])
+  @@map("share_packages")
+}
+
+/// Coarse by design (§36): when, org hint, sections — no fingerprinting.
+model ShareAccessLog {
+  id             String   @id @default(uuid(7))
+  sharePackageId String   @map("share_package_id")
+  accessedAt     DateTime @default(now()) @map("accessed_at")
+  sectionsViewed Json?    @map("sections_viewed")
+  orgHint        String?  @map("org_hint")
+  ipCoarse       String?  @map("ip_coarse")
+
+  sharePackage SharePackage @relation(fields: [sharePackageId], references: [id], onDelete: Cascade)
+
+  @@index([sharePackageId, accessedAt])
+  @@map("share_access_logs")
+}
+
+/// Real consent objects (§38), individually revocable; revoking the consent
+/// kills the share it authorizes.
+model Consent {
+  id            String    @id @default(uuid(7))
+  subjectUserId String    @map("subject_user_id")
+  recipient     String
+  purpose       String
+  resources     Json
+  grantedAt     DateTime  @default(now()) @map("granted_at")
+  expiresAt     DateTime? @map("expires_at")
+  revokedAt     DateTime? @map("revoked_at")
+
+  subject User @relation(fields: [subjectUserId], references: [id], onDelete: Cascade)
+
+  @@index([subjectUserId])
+  @@map("consents")
 }
 
 /// Cover letters vary by country convention, not by design (§23): the layout
