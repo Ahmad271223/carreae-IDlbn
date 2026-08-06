@@ -1,0 +1,12 @@
+.git
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+infra/docker/volumes
+.env
+.env.*
+!.env.example
+*.log

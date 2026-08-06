@@ -148,7 +148,11 @@ export class RenderWorker implements OnModuleInit, OnModuleDestroy {
 
   private async htmlToPdf(html: string): Promise<Buffer> {
     if (!this.browser) {
-      this.browser = await chromium.launch();
+      this.browser = await chromium.launch({
+        // Containers running as root need the sandbox disabled; the input is
+        // our own sanitized template HTML, never arbitrary web content.
+        args: process.env.CHROMIUM_NO_SANDBOX === "1" ? ["--no-sandbox"] : [],
+      });
     }
     const page = await this.browser.newPage();
     try {

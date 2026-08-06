@@ -8,6 +8,15 @@ import helmet from "helmet";
  * classic source of "passes in test, fails live" auth bugs.
  */
 export function configureApp(app: INestApplication): void {
+  // Behind the reverse proxy (TLS termination) req.ip must come from
+  // X-Forwarded-For, and secure cookies must be honored.
+  if (process.env.TRUST_PROXY === "1") {
+    (
+      app.getHttpAdapter().getInstance() as {
+        set: (key: string, value: unknown) => void;
+      }
+    ).set("trust proxy", 1);
+  }
   app.use(helmet());
   app.use(cookieParser());
   app.enableCors({
