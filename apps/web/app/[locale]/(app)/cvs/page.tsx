@@ -27,6 +27,7 @@ export default function CvsPage() {
   const [warning, setWarning] = useState("");
   const [error, setError] = useState("");
   const [rendering, setRendering] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
 
   const reload = useCallback(() => {
     api<Cv[]>("/cvs").then(setCvs).catch(() => undefined);
@@ -195,18 +196,232 @@ export default function CvsPage() {
                     {cv.templateKey} · {cv.language}
                   </span>
                 </span>
-                <Button
-                  variant="secondary"
-                  disabled={rendering === cv.id}
-                  onClick={() => render(cv.id)}
-                >
-                  {rendering === cv.id ? t("cv.rendering") : t("cv.render")}
-                </Button>
+                <span className="flex gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setEditing(editing === cv.id ? null : cv.id)}
+                  >
+                    {editing === cv.id ? t("cv.done") : t("cv.edit")}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={rendering === cv.id}
+                    onClick={() => render(cv.id)}
+                  >
+                    {rendering === cv.id ? t("cv.rendering") : t("cv.render")}
+                  </Button>
+                </span>
               </li>
             ))}
           </ul>
         )}
       </Card>
+      {editing && <CvEditor key={editing} cvId={editing} />}
     </>
+  );
+}
+
+interface CvItem {
+  sourceType: string;
+  sourceId: string | null;
+  order: number;
+  visible: boolean;
+  displayOverride: Record<string, unknown> | null;
+}
+
+function CvEditor({ cvId }: { cvId: string }) {
+  const { t } = useT();
+  const [items, setItems] = useState<CvItem[]>([]);
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  const [photoEnabled, setPhotoEnabled] = useState(false);
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+
+  const load = useCallback(() => {
+    api<{ items: CvItem[]; photoEnabled: boolean }>(`/cvs/${cvId}`)
+      .then((cv) => {
+        setItems(cv.items);
+        setPhotoEnabled(cv.photoEnabled);
+      })
+      .catch(() => setError(t("common.error")));
+    // Resolve friendly labels for each referenced source entry.
+    interface Ref {
+      id: string;
+      position?: string;
+      companyName?: string;
+      degreeType?: string;
+      institutionName?: string;
+      language?: string;
+      level?: string;
+      name?: string;
+    }
+    Promise.all([
+      api<Ref[]>("/experiences"),
+      api<Ref[]>("/educations"),
+      api<Ref[]>("/languages"),
+      api<Ref[]>("/skills"),
+    ])
+      .then(([exp, edu, lang, skill]) => {
+        const map: Record<string, string> = {};
+        exp.forEach((e) => (map[e.id] = `${e.position} — ${e.companyName}`));
+        edu.forEach((e) => (map[e.id] = `${e.degreeType} — ${e.institutionName}`));
+        lang.forEach((e) => (map[e.id] = `${e.language} (${e.level})`));
+        skill.forEach((e) => (map[e.id] = e.name ?? ""));
+        setLabels(map);
+      })
+      .catch(() => undefined);
+  }, [cvId, t]);
+  useEffect(load, [load]);
+
+  function move(index: number, delta: number) {
+    setItems((list) => {
+      const next = [...list];
+      const target = index + delta;
+      if (target < 0 || target >= next.length) return list;
+      [next[index], next[target]] = [next[target]!, next[index]!];
+      return next;
+    });
+  }
+
+  function setDescription(index: number, value: string) {
+    setItems((list) =>
+      list.map((it, i) =>
+        i === index
+          ? { ...it, displayOverride: { ...(it.displayOverride ?? {}), description: value } }
+          : it,
+      ),
+    );
+  }
+
+  async function save() {
+    setError("");
+    setSaved(false);
+    try {
+      await api(`/cvs/${cvId}/items`, {
+        method: "PUT",
+        body: {
+          items: items.map((it, i) => ({
+            sourceType: it.sourceType,
+            sourceId: it.sourceId ?? undefined,
+            // description is presentation-only — never locked by §22.
+            displayOverride: cleanOverride(it.displayOverride),
+            order: i,
+            visible: it.visible,
+          })),
+        },
+      });
+      setSaved(true);
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message === "VERIFIED_FIELD_LOCKED"
+          ? t("cv.fieldLocked")
+          : t("common.error"),
+      );
+    }
+  }
+
+  async function togglePhoto(next: boolean) {
+    setPhotoEnabled(next);
+    await api(`/cvs/${cvId}`, { method: "PATCH", body: { photoEnabled: next } }).catch(
+      () => undefined,
+    );
+  }
+
+  return (
+    <Card title={t("cv.editItems")}>
+      <label className="mb-3 flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={photoEnabled}
+          onChange={(e) => togglePhoto(e.target.checked)}
+        />
+        {t("cv.photoEnabled")}
+      </label>
+
+      <ul className="space-y-2">
+        {items.map((item, index) => (
+          <li key={index} className="rounded-md border border-gray-200 p-3">
+            <div className="flex items-center justify-between gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={item.visible}
+                  onChange={(e) =>
+                    setItems((list) =>
+                      list.map((it, i) =>
+                        i === index ? { ...it, visible: e.target.checked } : it,
+                      ),
+                    )
+                  }
+                />
+                <span className={item.visible ? "" : "text-gray-400 line-through"}>
+                  {item.sourceId ? (labels[item.sourceId] ?? item.sourceType) : item.sourceType}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {t(`cv.section.${sectionKey(item.sourceType)}`)}
+                </span>
+              </label>
+              <span className="flex gap-1">
+                <button
+                  onClick={() => move(index, -1)}
+                  className="rounded px-1.5 text-gray-400 hover:bg-gray-100"
+                  aria-label="up"
+                >
+                  ↑
+                </button>
+                <button
+                  onClick={() => move(index, 1)}
+                  className="rounded px-1.5 text-gray-400 hover:bg-gray-100"
+                  aria-label="down"
+                >
+                  ↓
+                </button>
+              </span>
+            </div>
+            {item.sourceType === "CREDENTIAL" ? (
+              <p className="mt-2 text-xs text-gray-400">{t("cv.credentialLocked")}</p>
+            ) : (
+              <textarea
+                value={String(item.displayOverride?.description ?? "")}
+                onChange={(e) => setDescription(index, e.target.value)}
+                rows={2}
+                placeholder={t("cv.descriptionOverride")}
+                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-4 flex items-center gap-3">
+        <Button onClick={save}>{t("common.save")}</Button>
+        {saved && <span className="text-sm text-verified">{t("letters.saved")}</span>}
+      </div>
+      <ErrorText>{error}</ErrorText>
+    </Card>
+  );
+}
+
+/** Drops empty overrides so an untouched item sends no override at all. */
+function cleanOverride(
+  override: Record<string, unknown> | null,
+): Record<string, unknown> | undefined {
+  if (!override) return undefined;
+  const entries = Object.entries(override).filter(
+    ([, v]) => v !== "" && v !== null && v !== undefined,
+  );
+  return entries.length ? Object.fromEntries(entries) : undefined;
+}
+
+function sectionKey(sourceType: string): string {
+  return (
+    {
+      EXPERIENCE: "experience",
+      EDUCATION: "education",
+      LANGUAGE: "languages",
+      SKILL: "skills",
+      CREDENTIAL: "certificates",
+      CUSTOM: "profile",
+    }[sourceType] ?? "profile"
   );
 }
