@@ -52,7 +52,7 @@ export default function WalletPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("wallet.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("wallet.title")}</h1>
       <Card title={t("wallet.upload")}>
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm">
@@ -91,7 +91,7 @@ export default function WalletPage() {
             {documents.map((doc) => (
               <li
                 key={doc.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {doc.fileName}
@@ -118,5 +118,8 @@ export default function WalletPage() {
         )}
       </Card>
     </>
+  );
+}
+</>
   );
 }

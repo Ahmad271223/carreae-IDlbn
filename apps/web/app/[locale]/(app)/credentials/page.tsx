@@ -63,7 +63,7 @@ export default function CredentialsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("credentials.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("credentials.title")}</h1>
       <ErrorText>{error}</ErrorText>
       {credentials.length === 0 ? (
         <Card>
@@ -76,29 +76,29 @@ export default function CredentialsPage() {
             <Card key={c.id}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="font-medium">{t(`credentials.type.${c.credentialType}`)}</p>
-                  <p className="text-sm text-gray-600">
+                  <p className="font-display text-lg font-bold tracking-tight text-brand">{t(`credentials.type.${c.credentialType}`)}</p>
+                  <p className="mt-0.5 text-sm text-muted">
                     {t("viewer.issuedBy")} {c.issuerName}
                   </p>
                 </div>
                 <StatusBadge status={c.status} label={t(`credentials.status.${c.status}`)} />
               </div>
 
-              <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 rounded-xl bg-brand-soft/60 p-4 text-sm">
                 {Object.entries(c.payload).map(([key, value]) => (
                   <div key={key} className="contents">
-                    <dt className="text-gray-500">{key}</dt>
-                    <dd className="text-gray-800">{String(value ?? "—")}</dd>
+                    <dt className="text-muted">{key}</dt>
+                    <dd className="font-medium text-ink">{String(value ?? "—")}</dd>
                   </div>
                 ))}
-                <dt className="text-gray-500">{t("credentials.issuedAt")}</dt>
-                <dd className="text-gray-800">
+                <dt className="text-muted">{t("credentials.issuedAt")}</dt>
+                <dd className="font-medium text-ink">
                   {new Date(c.issuedAt).toLocaleDateString()}
                 </dd>
                 {c.expiresAt && (
                   <>
-                    <dt className="text-gray-500">{t("credentials.expiresAt")}</dt>
-                    <dd className="text-gray-800">
+                    <dt className="text-muted">{t("credentials.expiresAt")}</dt>
+                    <dd className="font-medium text-ink">
                       {new Date(c.expiresAt).toLocaleDateString()}
                     </dd>
                   </>
@@ -150,11 +150,11 @@ function StatusBadge({ status, label }: { status: string; label: string }) {
   if (status === "ACTIVE") return <VerifiedBadge label={label} />;
   const tone =
     status === "REVOKED" || status === "DECLINED_BY_SUBJECT"
-      ? "bg-red-50 text-red-700"
-      : "bg-gray-100 text-gray-600";
+      ? "bg-red-50 text-red-700 ring-red-100"
+      : "bg-brand-soft text-brand-tint ring-brand-tint/15";
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${tone}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${tone}`}
     >
       {label}
     </span>

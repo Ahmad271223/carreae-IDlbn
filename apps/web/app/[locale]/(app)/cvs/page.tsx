@@ -134,7 +134,7 @@ export default function CvsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("cv.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("cv.title")}</h1>
       <Card title={t("cv.create")}>
         <form onSubmit={create} className="flex flex-wrap items-end gap-3">
           <div className="min-w-48 flex-1">
@@ -147,13 +147,13 @@ export default function CvsPage() {
             </Field>
           </div>
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
+            <span className="mb-1.5 block font-semibold text-ink/80">
               {t("cv.template")}
             </span>
             <select
               value={templateKey}
               onChange={(e) => setTemplateKey(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               {templates.map((tpl) => (
                 <option key={tpl.key} value={tpl.key}>
@@ -188,7 +188,7 @@ export default function CvsPage() {
             {cvs.map((cv) => (
               <li
                 key={cv.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {cv.title}
@@ -340,7 +340,7 @@ function CvEditor({ cvId }: { cvId: string }) {
 
       <ul className="space-y-2">
         {items.map((item, index) => (
-          <li key={index} className="rounded-md border border-gray-200 p-3">
+          <li key={index} className="rounded-xl border border-line bg-white p-3.5">
             <div className="flex items-center justify-between gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input
