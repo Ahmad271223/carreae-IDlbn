@@ -58,6 +58,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
               </Link>
             ))}
           </nav>
+          <Link
+            href={`/${locale}/settings/security`}
+            className="text-sm text-gray-500 hover:text-gray-800"
+          >
+            {t("nav.security")}
+          </Link>
           <button
             onClick={logout}
             className="text-sm text-gray-500 hover:text-gray-800"
