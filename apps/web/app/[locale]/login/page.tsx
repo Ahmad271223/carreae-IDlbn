@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { branding } from "@careerid/branding";
 import { api, ApiError, API_BASE } from "../../../lib/api";
 import { useT } from "../../../lib/i18n-client";
 import { Button, Card, ErrorText, Field, Input } from "../../../components/ui";
@@ -65,7 +66,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 p-6">
+      <Link href={`/${locale}`} className="flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-b from-brand-tint to-brand text-white shadow-[0_8px_20px_-8px_rgba(20,36,61,0.6)]">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+            <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
+        <span className="font-display text-lg font-bold tracking-tight text-brand">
+          {branding.productName}
+        </span>
+      </Link>
       {challengeToken ? (
         <Card title={t("auth.mfaTitle")}>
           <form onSubmit={submitCode} className="space-y-3">

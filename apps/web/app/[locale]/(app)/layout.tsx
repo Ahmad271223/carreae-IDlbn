@@ -40,18 +40,26 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-200 bg-white">
+      <header className="sticky top-0 z-20 border-b border-line bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
-          <span className="font-bold text-brand">{branding.productName}</span>
+          <Link href={`/${locale}`} className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-b from-brand-tint to-brand text-white">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+                <path d="m9 12 2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="font-display font-bold tracking-tight text-brand">{branding.productName}</span>
+          </Link>
           <nav className="flex flex-1 gap-1 overflow-x-auto text-sm">
             {NAV.map(([slug, key]) => (
               <Link
                 key={slug}
                 href={`/${locale}/${slug}`}
-                className={`rounded-md px-2 py-1 ${
+                className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 transition-colors ${
                   pathname?.includes(`/${slug}`)
-                    ? "bg-brand/10 font-medium text-brand"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "bg-brand text-white shadow-sm"
+                    : "text-muted hover:bg-brand-soft hover:text-brand"
                 }`}
               >
                 {t(key)}
