@@ -1,0 +1,16 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@careerid/web",
+        "dev"
+      ],
+      "autoPort": false,
+      "port": 3002
+    }
+  ]
+}
