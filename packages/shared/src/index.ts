@@ -714,3 +714,12 @@ export const VerificationCreateSchema = z.object({
   organizationId: z.string().uuid(),
 });
 export type VerificationCreateDto = z.infer<typeof VerificationCreateSchema>;
+
+// ---------- Account DTOs (export & erasure, SECURITY.md §4) ----------
+
+export const AccountEraseSchema = z.object({
+  /** Required when the account has a password; SSO-only accounts confirm instead. */
+  password: z.string().min(1).max(200).optional(),
+  confirm: z.boolean().optional(),
+});
+export type AccountEraseDto = z.infer<typeof AccountEraseSchema>;

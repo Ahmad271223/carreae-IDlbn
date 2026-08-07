@@ -44,6 +44,7 @@ export default function ApplicationsPage() {
   const [shareResult, setShareResult] = useState<{ url: string; qrSvg: string } | null>(
     null,
   );
+  const [editingApp, setEditingApp] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const reload = useCallback(() => {
@@ -191,17 +192,36 @@ export default function ApplicationsPage() {
             {applications.map((application) => (
               <li
                 key={application.id}
-                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
+                className="rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
-                <span>
-                  {application.title}
-                  <span className="ms-2 text-xs text-gray-400">
-                    {application.type}
+                <div className="flex items-center justify-between gap-2">
+                  <span>
+                    {application.title}
+                    <span className="ms-2 text-xs text-gray-400">
+                      {application.type}
+                    </span>
                   </span>
-                </span>
-                <Button variant="secondary" onClick={() => share(application.id)}>
-                  {t("apps.share")}
-                </Button>
+                  <span className="flex gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        setEditingApp(
+                          editingApp === application.id ? null : application.id,
+                        )
+                      }
+                    >
+                      {editingApp === application.id
+                        ? t("apps.closeContents")
+                        : t("apps.editContents")}
+                    </Button>
+                    <Button variant="secondary" onClick={() => share(application.id)}>
+                      {t("apps.share")}
+                    </Button>
+                  </span>
+                </div>
+                {editingApp === application.id && (
+                  <ApplicationEditor key={application.id} applicationId={application.id} />
+                )}
               </li>
             ))}
           </ul>
@@ -287,5 +307,164 @@ export default function ApplicationsPage() {
         <p className="mt-2 text-xs text-gray-500">{t("apps.consentHint")}</p>
       </Card>
     </>
+  );
+}
+
+// ---------- Contents editor (PUT /applications/:id/items) ----------
+
+interface AppItem {
+  itemType: string;
+  itemId: string;
+  order: number;
+}
+interface Candidate {
+  itemType: string;
+  itemId: string;
+  label: string;
+  order: number;
+}
+
+const SECTIONS = ["education", "experience", "languages", "skills"] as const;
+
+function ApplicationEditor({ applicationId }: { applicationId: string }) {
+  const { t } = useT();
+  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  const keyOf = (itemType: string, itemId: string) => `${itemType}:${itemId}`;
+
+  useEffect(() => {
+    Promise.all([
+      api<{ items: AppItem[] }>(`/applications/${applicationId}`),
+      api<Array<{ id: string; title: string }>>("/cvs"),
+      api<Array<{ id: string; title: string }>>("/cover-letters"),
+      api<Array<{ id: string; fileName: string; scanStatus: string }>>("/documents"),
+      api<Array<{ id: string; credentialType: string; status: string }>>(
+        "/credentials",
+      ),
+    ])
+      .then(([application, cvs, letters, documents, credentials]) => {
+        const list: Candidate[] = [
+          ...cvs.map((cv, i) => ({
+            itemType: "CV",
+            itemId: cv.id,
+            label: cv.title,
+            order: i,
+          })),
+          ...letters.map((l, i) => ({
+            itemType: "COVER_LETTER",
+            itemId: l.id,
+            label: l.title,
+            order: 10 + i,
+          })),
+          ...credentials
+            .filter((c) => c.status === "ACTIVE")
+            .map((c, i) => ({
+              itemType: "CREDENTIAL",
+              itemId: c.id,
+              label: t(`credentials.type.${c.credentialType}`),
+              order: 20 + i,
+            })),
+          ...documents
+            .filter((d) => d.scanStatus === "CLEAN")
+            .map((d, i) => ({
+              itemType: "DOCUMENT",
+              itemId: d.id,
+              label: d.fileName,
+              order: 100 + i,
+            })),
+          ...SECTIONS.map((section, i) => ({
+            itemType: "SECTION",
+            itemId: section,
+            label: t(`cv.section.${section === "languages" ? "languages" : section}`),
+            order: 200 + i,
+          })),
+        ];
+        setCandidates(list);
+        setSelected(
+          new Set(application.items.map((it) => keyOf(it.itemType, it.itemId))),
+        );
+        setLoaded(true);
+      })
+      .catch(() => setError(t("common.error")));
+  }, [applicationId, t]);
+
+  function toggle(candidate: Candidate) {
+    setSelected((current) => {
+      const next = new Set(current);
+      const key = keyOf(candidate.itemType, candidate.itemId);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function save() {
+    setError("");
+    setSaved(false);
+    try {
+      const items = candidates
+        .filter((c) => selected.has(keyOf(c.itemType, c.itemId)))
+        .map((c) => ({ itemType: c.itemType, itemId: c.itemId, order: c.order }));
+      await api(`/applications/${applicationId}/items`, {
+        method: "PUT",
+        body: { items },
+      });
+      setSaved(true);
+    } catch {
+      setError(t("common.error"));
+    }
+  }
+
+  if (!loaded) {
+    return <p className="mt-3 text-xs text-gray-500">{t("common.loading")}</p>;
+  }
+
+  const groups: Array<[string, Candidate[]]> = [
+    ["apps.group.cvs", candidates.filter((c) => c.itemType === "CV")],
+    ["apps.group.letters", candidates.filter((c) => c.itemType === "COVER_LETTER")],
+    ["apps.group.credentials", candidates.filter((c) => c.itemType === "CREDENTIAL")],
+    ["apps.group.documents", candidates.filter((c) => c.itemType === "DOCUMENT")],
+    ["apps.group.sections", candidates.filter((c) => c.itemType === "SECTION")],
+  ];
+
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        {groups.map(([labelKey, list]) =>
+          list.length === 0 ? null : (
+            <div key={labelKey}>
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-tint">
+                {t(labelKey)}
+              </p>
+              <ul className="space-y-1">
+                {list.map((candidate) => (
+                  <li key={keyOf(candidate.itemType, candidate.itemId)}>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(
+                          keyOf(candidate.itemType, candidate.itemId),
+                        )}
+                        onChange={() => toggle(candidate)}
+                      />
+                      {candidate.label}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        )}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        <Button onClick={save}>{t("common.save")}</Button>
+        {saved && <span className="text-sm text-verified">{t("letters.saved")}</span>}
+      </div>
+      <ErrorText>{error}</ErrorText>
+    </div>
   );
 }

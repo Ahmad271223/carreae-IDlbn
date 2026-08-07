@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, ApiError } from "../../../../../lib/api";
 import { useT } from "../../../../../lib/i18n-client";
 import { Button, Card, ErrorText, Field, Input } from "../../../../../components/ui";
@@ -39,6 +40,7 @@ export default function SecurityPage() {
       <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("security.title")}</h1>
       {me && <MfaSection enabled={me.mfaEnabled} onChange={reload} />}
       <SsoSection />
+      <PrivacySection />
       <Card title={t("security.sessions")}>
         <ul className="space-y-1">
           {sessions.map((s) => (
@@ -218,6 +220,112 @@ function SsoSection() {
         <Button variant="secondary" onClick={() => link("apple")}>
           {t("security.linkApple")}
         </Button>
+      </div>
+      <ErrorText>{error}</ErrorText>
+    </Card>
+  );
+}
+
+/** Export & erasure (SECURITY.md §4) — the user's data stays the user's. */
+function PrivacySection() {
+  const { locale, t } = useT();
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function exportData() {
+    setError("");
+    setBusy(true);
+    try {
+      const data = await api<Record<string, unknown>>("/account/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "careerid-export.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(t("common.error"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function erase(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      // Re-auth on the server: session alone must not be enough (§4).
+      await api("/account/erase", {
+        method: "POST",
+        body: password ? { password } : { confirm: true },
+      });
+      router.replace(`/${locale}/login`);
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.code === "REAUTH_REQUIRED"
+          ? t("privacy.reauthFailed")
+          : t("common.error"),
+      );
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={t("privacy.title")}>
+      <div className="space-y-4">
+        <div>
+          <p className="text-sm text-muted">{t("privacy.exportHint")}</p>
+          <Button
+            variant="secondary"
+            className="mt-2"
+            disabled={busy}
+            onClick={exportData}
+          >
+            {t("privacy.export")}
+          </Button>
+        </div>
+        <div className="border-t border-line pt-4">
+          <p className="text-sm text-muted">{t("privacy.eraseHint")}</p>
+          {confirming ? (
+            <form onSubmit={erase} className="mt-2 flex flex-wrap items-end gap-2">
+              <div className="min-w-48">
+                <Field label={t("auth.password")}>
+                  <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoFocus
+                  />
+                </Field>
+              </div>
+              <Button type="submit" variant="danger" disabled={busy}>
+                {t("privacy.eraseConfirm")}
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setConfirming(false)}
+              >
+                {t("common.cancel")}
+              </Button>
+            </form>
+          ) : (
+            <Button
+              variant="danger"
+              className="mt-2"
+              onClick={() => setConfirming(true)}
+            >
+              {t("privacy.erase")}
+            </Button>
+          )}
+        </div>
       </div>
       <ErrorText>{error}</ErrorText>
     </Card>
