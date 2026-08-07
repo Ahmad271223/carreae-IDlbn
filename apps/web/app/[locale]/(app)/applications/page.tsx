@@ -16,11 +16,29 @@ interface Share {
   viewCount: number;
   createdAt: string;
 }
+interface AccessLogEntry {
+  id: string;
+  accessedAt: string;
+  orgHint: string | null;
+  ipCoarse: string | null;
+  sectionsViewed: string[] | null;
+}
+interface Consent {
+  id: string;
+  recipient: string;
+  purpose: string;
+  grantedAt: string;
+  expiresAt: string | null;
+  revokedAt: string | null;
+}
 
 export default function ApplicationsPage() {
   const { t } = useT();
   const [applications, setApplications] = useState<Application[]>([]);
   const [shares, setShares] = useState<Share[]>([]);
+  const [consents, setConsents] = useState<Consent[]>([]);
+  const [logs, setLogs] = useState<Record<string, AccessLogEntry[]>>({});
+  const [expanded, setExpanded] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("JOB");
   const [shareResult, setShareResult] = useState<{ url: string; qrSvg: string } | null>(
@@ -31,8 +49,28 @@ export default function ApplicationsPage() {
   const reload = useCallback(() => {
     api<Application[]>("/applications").then(setApplications).catch(() => undefined);
     api<Share[]>("/shares").then(setShares).catch(() => undefined);
+    api<Consent[]>("/consents").then(setConsents).catch(() => undefined);
   }, []);
   useEffect(reload, [reload]);
+
+  async function toggleLog(shareId: string) {
+    if (expanded === shareId) {
+      setExpanded(null);
+      return;
+    }
+    setExpanded(shareId);
+    if (!logs[shareId]) {
+      const entries = await api<AccessLogEntry[]>(
+        `/shares/${shareId}/access-log`,
+      ).catch(() => []);
+      setLogs((l) => ({ ...l, [shareId]: entries }));
+    }
+  }
+
+  async function revokeConsent(id: string) {
+    await api(`/consents/${id}/revoke`, { method: "POST" }).catch(() => undefined);
+    reload();
+  }
 
   /** Creates the application and attaches everything usable automatically. */
   async function create(event: React.FormEvent) {
@@ -176,18 +214,69 @@ export default function ApplicationsPage() {
         ) : (
           <ul className="space-y-1">
             {shares.map((s) => (
+              <li key={s.id} className="rounded-md bg-gray-50 px-3 py-1.5 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span>
+                    {new Date(s.createdAt).toLocaleDateString()} · {s.viewCount}×
+                    {s.revokedAt && (
+                      <span className="ms-2 text-xs text-gray-400">
+                        {t("apps.revoked")}
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex gap-2">
+                    <Button variant="secondary" onClick={() => toggleLog(s.id)}>
+                      {expanded === s.id ? t("apps.hideLog") : t("apps.accessLog")}
+                    </Button>
+                    {!s.revokedAt && (
+                      <Button variant="danger" onClick={() => revoke(s.id)}>
+                        {t("apps.revoke")}
+                      </Button>
+                    )}
+                  </span>
+                </div>
+                {expanded === s.id && (
+                  <div className="mt-2 border-t border-gray-200 pt-2">
+                    {(logs[s.id]?.length ?? 0) === 0 ? (
+                      <p className="text-xs text-gray-500">{t("apps.noAccess")}</p>
+                    ) : (
+                      <ul className="space-y-0.5 text-xs text-gray-600">
+                        {logs[s.id]!.map((entry) => (
+                          <li key={entry.id}>
+                            {new Date(entry.accessedAt).toLocaleString()}
+                            {entry.orgHint && ` · ${entry.orgHint}`}
+                            {entry.ipCoarse && ` · ${entry.ipCoarse}`}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card title={t("apps.consents")}>
+        {consents.length === 0 ? (
+          <p className="text-sm text-gray-500">{t("common.none")}</p>
+        ) : (
+          <ul className="space-y-1">
+            {consents.map((c) => (
               <li
-                key={s.id}
+                key={c.id}
                 className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
               >
                 <span>
-                  {new Date(s.createdAt).toLocaleDateString()} · {s.viewCount}×
-                  {s.revokedAt && (
-                    <span className="ms-2 text-xs text-gray-400">revoked</span>
-                  )}
+                  {c.purpose}
+                  <span className="ms-2 text-xs text-gray-400">
+                    {c.recipient} · {new Date(c.grantedAt).toLocaleDateString()}
+                    {c.revokedAt && ` · ${t("apps.revoked")}`}
+                  </span>
                 </span>
-                {!s.revokedAt && (
-                  <Button variant="danger" onClick={() => revoke(s.id)}>
+                {!c.revokedAt && (
+                  <Button variant="danger" onClick={() => revokeConsent(c.id)}>
                     {t("apps.revoke")}
                   </Button>
                 )}
@@ -195,6 +284,7 @@ export default function ApplicationsPage() {
             ))}
           </ul>
         )}
+        <p className="mt-2 text-xs text-gray-500">{t("apps.consentHint")}</p>
       </Card>
     </>
   );
