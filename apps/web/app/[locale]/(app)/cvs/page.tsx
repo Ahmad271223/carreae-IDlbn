@@ -386,7 +386,7 @@ function CvEditor({ cvId }: { cvId: string }) {
                 onChange={(e) => setDescription(index, e.target.value)}
                 rows={2}
                 placeholder={t("cv.descriptionOverride")}
-                className="mt-2 w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                className="mt-2 w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-all focus:border-brand-tint focus:outline-none"
               />
             )}
           </li>

@@ -49,7 +49,7 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("notifications.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("notifications.title")}</h1>
       <Card
         actions={
           unreadCount > 0 ? (

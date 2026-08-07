@@ -131,7 +131,7 @@ export default function ApplicationsPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("apps.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("apps.title")}</h1>
       <Card title={t("apps.create")}>
         <form onSubmit={create} className="flex flex-wrap items-end gap-3">
           <div className="min-w-48 flex-1">
@@ -144,13 +144,13 @@ export default function ApplicationsPage() {
             </Field>
           </div>
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
+            <span className="mb-1.5 block font-semibold text-ink/80">
               {t("apps.type")}
             </span>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               <option>JOB</option>
               <option>UNIVERSITY</option>
@@ -191,7 +191,7 @@ export default function ApplicationsPage() {
             {applications.map((application) => (
               <li
                 key={application.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {application.title}
@@ -214,7 +214,7 @@ export default function ApplicationsPage() {
         ) : (
           <ul className="space-y-1">
             {shares.map((s) => (
-              <li key={s.id} className="rounded-md bg-gray-50 px-3 py-1.5 text-sm">
+              <li key={s.id} className="rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40">
                 <div className="flex items-center justify-between gap-2">
                   <span>
                     {new Date(s.createdAt).toLocaleDateString()} · {s.viewCount}×
@@ -266,7 +266,7 @@ export default function ApplicationsPage() {
             {consents.map((c) => (
               <li
                 key={c.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {c.purpose}

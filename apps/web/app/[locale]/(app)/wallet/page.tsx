@@ -56,13 +56,13 @@ export default function WalletPage() {
       <Card title={t("wallet.upload")}>
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
+            <span className="mb-1.5 block font-semibold text-ink/80">
               {t("wallet.category")}
             </span>
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               {CATEGORIES.map((c) => (
                 <option key={c}>{c}</option>

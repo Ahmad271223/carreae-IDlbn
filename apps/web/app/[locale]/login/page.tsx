@@ -128,13 +128,13 @@ export default function LoginPage() {
             <p className="text-center text-xs text-gray-400">{t("auth.orContinue")}</p>
             <a
               href={`${API_BASE}/api/v1/auth/oauth/google/start`}
-              className="block rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-medium text-gray-800 hover:bg-gray-100"
+              className="block rounded-xl border border-line bg-white px-3.5 py-2.5 text-center text-sm font-semibold text-brand transition-colors hover:border-brand-tint/50 hover:bg-brand-soft"
             >
               {t("auth.sso.google")}
             </a>
             <a
               href={`${API_BASE}/api/v1/auth/oauth/apple/start`}
-              className="block rounded-md border border-gray-300 bg-white px-3 py-1.5 text-center text-sm font-medium text-gray-800 hover:bg-gray-100"
+              className="block rounded-xl border border-line bg-white px-3.5 py-2.5 text-center text-sm font-semibold text-brand transition-colors hover:border-brand-tint/50 hover:bg-brand-soft"
             >
               {t("auth.sso.apple")}
             </a>

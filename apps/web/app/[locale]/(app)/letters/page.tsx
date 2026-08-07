@@ -84,7 +84,7 @@ export default function LettersPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("letters.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("letters.title")}</h1>
       <Card title={t("letters.create")}>
         <form onSubmit={create} className="flex flex-wrap items-end gap-3">
           <div className="min-w-48 flex-1">
@@ -93,13 +93,13 @@ export default function LettersPage() {
             </Field>
           </div>
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
+            <span className="mb-1.5 block font-semibold text-ink/80">
               {t("letters.layout")}
             </span>
             <select
               value={layoutTemplate}
               onChange={(e) => setLayoutTemplate(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               {LAYOUTS.map((l) => (
                 <option key={l} value={l}>
@@ -109,13 +109,13 @@ export default function LettersPage() {
             </select>
           </label>
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">
+            <span className="mb-1.5 block font-semibold text-ink/80">
               {t("letters.convention")}
             </span>
             <select
               value={convention}
               onChange={(e) => setConvention(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               {CONVENTIONS.map((c) => (
                 <option key={c} value={c}>
@@ -147,7 +147,7 @@ export default function LettersPage() {
             {letters.map((letter) => (
               <li
                 key={letter.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {letter.title}
@@ -314,7 +314,7 @@ function LetterEditor({ letterId }: { letterId: string }) {
           value={jobDescription}
           onChange={(e) => setJobDescription(e.target.value)}
           rows={3}
-          className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+          className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-all focus:border-brand-tint focus:outline-none"
           placeholder={t("letters.jobDescription.hint")}
         />
       </Field>
@@ -323,7 +323,7 @@ function LetterEditor({ letterId }: { letterId: string }) {
         {blocks.map((block) => {
           const d = drafts[block.id];
           return (
-            <div key={block.id} className="rounded-md border border-gray-200 p-3">
+            <div key={block.id} className="rounded-xl border border-line bg-white p-4">
               <div className="mb-1 flex items-center justify-between">
                 <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   {t(`letters.block.${block.type}`)}
@@ -340,7 +340,7 @@ function LetterEditor({ letterId }: { letterId: string }) {
                   setContents((c) => ({ ...c, [block.id]: e.target.value }))
                 }
                 rows={block.type === "BODY" ? 5 : 2}
-                className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-brand focus:outline-none"
+                className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-all focus:border-brand-tint focus:outline-none"
               />
               {DRAFTABLE.has(block.type) && (
                 <div className="mt-2">
@@ -354,7 +354,7 @@ function LetterEditor({ letterId }: { letterId: string }) {
                 </div>
               )}
               {d && (
-                <div className="mt-2 rounded-md bg-amber-50 p-3 text-sm">
+                <div className="mt-2 rounded-xl border border-amber-200/60 bg-amber-50 p-4 text-sm">
                   <p className="whitespace-pre-wrap">{d.draft}</p>
                   {d.warnings.length > 0 && (
                     <ul className="mt-2 space-y-0.5 text-xs text-amber-800">

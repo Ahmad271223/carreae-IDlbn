@@ -53,7 +53,7 @@ export default function OrgPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("org.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("org.title")}</h1>
 
       {memberships.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -61,10 +61,10 @@ export default function OrgPage() {
             <button
               key={m.organization.id}
               onClick={() => setSelected(m.organization.id)}
-              className={`rounded-md px-3 py-1.5 text-sm ${
+              className={`rounded-xl px-3.5 py-2 text-sm transition-colors ${
                 selected === m.organization.id
-                  ? "bg-brand/10 font-medium text-brand"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  ? "bg-brand font-semibold text-white shadow-sm"
+                  : "bg-white text-muted ring-1 ring-inset ring-line hover:bg-brand-soft hover:text-brand"
               }`}
             >
               {m.organization.name}
@@ -164,7 +164,7 @@ function VerificationQueue({ orgId, canAct }: { orgId: string; canAct: boolean }
       ) : (
         <ul className="space-y-2">
           {items.map((item) => (
-            <li key={item.id} className="rounded-md border border-gray-200 p-3">
+            <li key={item.id} className="rounded-xl border border-line bg-white p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {t(`org.subject.${item.subjectType}`)}
               </p>
@@ -281,13 +281,13 @@ function IssueCredential({ orgId, canIssue }: { orgId: string; canIssue: boolean
               </Field>
             </div>
             <label className="text-sm">
-              <span className="mb-1 block font-medium text-gray-700">
+              <span className="mb-1.5 block font-semibold text-ink/80">
                 {t("org.credentialType")}
               </span>
               <select
                 value={credentialType}
                 onChange={(e) => setCredentialType(e.target.value)}
-                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+                className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
               >
                 {CREDENTIAL_TYPES.map((c) => (
                   <option key={c} value={c}>
@@ -346,7 +346,7 @@ function IssueCredential({ orgId, canIssue }: { orgId: string; canIssue: boolean
           {issued.map((c) => (
             <li
               key={c.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+              className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
             >
               <span>
                 {t(`credentials.type.${c.credentialType}`)}
@@ -420,11 +420,11 @@ function Relationships({ orgId }: { orgId: string }) {
           </Field>
         </div>
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-gray-700">{t("org.relType")}</span>
+          <span className="mb-1.5 block font-semibold text-ink/80">{t("org.relType")}</span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+            className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
           >
             {RELATIONSHIP_TYPES.map((r) => (
               <option key={r} value={r}>
@@ -443,7 +443,7 @@ function Relationships({ orgId }: { orgId: string }) {
           {rows.map((r) => (
             <li
               key={r.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+              className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
             >
               <span>{t(`org.relType.${r.type}`)}</span>
               <span className="text-xs text-gray-400">{t(`org.relStatus.${r.status}`)}</span>
@@ -513,11 +513,11 @@ function Members({ orgId, canManage }: { orgId: string; canManage: boolean }) {
             </Field>
           </div>
           <label className="text-sm">
-            <span className="mb-1 block font-medium text-gray-700">{t("org.memberRole")}</span>
+            <span className="mb-1.5 block font-semibold text-ink/80">{t("org.memberRole")}</span>
             <select
               value={role}
               onChange={(e) => setRole(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
             >
               {MEMBER_ROLES.map((r) => (
                 <option key={r} value={r}>
@@ -534,7 +534,7 @@ function Members({ orgId, canManage }: { orgId: string; canManage: boolean }) {
         {rows.map((m) => (
           <li
             key={m.id}
-            className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+            className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
           >
             <span className="font-mono text-xs text-gray-600">
               {m.userId.slice(0, 8)}
@@ -603,11 +603,11 @@ function RegisterOrg({ onDone }: { onDone: () => void }) {
       {done && <p className="mb-2 text-sm text-verified">{t("org.registered")}</p>}
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <label className="text-sm">
-          <span className="mb-1 block font-medium text-gray-700">{t("org.orgType")}</span>
+          <span className="mb-1.5 block font-semibold text-ink/80">{t("org.orgType")}</span>
           <select
             value={values.type}
             onChange={(e) => setValues({ ...values, type: e.target.value })}
-            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+            className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
           >
             {ORG_TYPES.map((o) => (
               <option key={o} value={o}>

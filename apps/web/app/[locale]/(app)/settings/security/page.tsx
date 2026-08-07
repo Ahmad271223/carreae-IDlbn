@@ -36,7 +36,7 @@ export default function SecurityPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("security.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("security.title")}</h1>
       {me && <MfaSection enabled={me.mfaEnabled} onChange={reload} />}
       <SsoSection />
       <Card title={t("security.sessions")}>
@@ -44,7 +44,7 @@ export default function SecurityPage() {
           {sessions.map((s) => (
             <li
               key={s.id}
-              className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+              className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
             >
               <span>
                 {s.deviceName ?? t("security.unknownDevice")}
@@ -149,7 +149,7 @@ function MfaSection({ enabled, onChange }: { enabled: boolean; onChange: () => v
       ) : setup ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-600">{t("security.mfaScanHint")}</p>
-          <div className="rounded-md bg-gray-50 p-3">
+          <div className="rounded-xl bg-brand-soft/60 p-4">
             <p className="text-xs text-gray-500">{t("security.mfaSecret")}</p>
             <p className="break-all font-mono text-sm">{setup.secret}</p>
             <a

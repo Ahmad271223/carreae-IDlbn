@@ -28,11 +28,11 @@ export default function DashboardPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("dashboard.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("dashboard.title")}</h1>
       <Card title={t("dashboard.completion")}>
         {completion ? (
           <div>
-            <div className="mb-2 h-2 w-full rounded-full bg-gray-100">
+            <div className="mb-2 h-2 w-full rounded-full bg-brand-soft">
               <div
                 className="h-2 rounded-full bg-verified transition-all"
                 style={{ inlineSize: `${completion.score}%` }}

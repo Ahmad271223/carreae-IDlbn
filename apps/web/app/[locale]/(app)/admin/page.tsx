@@ -61,7 +61,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("admin.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("admin.title")}</h1>
 
       <Card title={t("admin.auditTitle")}>
         <div className="flex items-center gap-3">
@@ -81,10 +81,10 @@ export default function AdminPage() {
           <button
             key={f || "all"}
             onClick={() => setFilter(f)}
-            className={`rounded-md px-3 py-1.5 text-sm ${
+            className={`rounded-xl px-3.5 py-2 text-sm transition-colors ${
               filter === f
-                ? "bg-brand/10 font-medium text-brand"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                ? "bg-brand font-semibold text-white shadow-sm"
+                : "bg-white text-muted ring-1 ring-inset ring-line hover:bg-brand-soft hover:text-brand"
             }`}
           >
             {f ? statusLabel(t, f) : t("admin.filter.all")}

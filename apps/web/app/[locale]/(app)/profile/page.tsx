@@ -152,7 +152,7 @@ export default function ProfilePage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">{t("profile.title")}</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("profile.title")}</h1>
       <Card title={t("profile.title")}>
         <form onSubmit={saveProfile} className="grid gap-3 sm:grid-cols-2">
           {(
@@ -184,7 +184,7 @@ export default function ProfilePage() {
             {invitedRelationships.map((r) => (
               <li
                 key={r.id}
-                className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+                className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
               >
                 <span>
                   {t("relationship.invitedBy", { org: r.organizationName })}
@@ -324,7 +324,7 @@ function EntryList({
       {entries.map((entry) => (
         <li
           key={entry.id}
-          className="flex items-center justify-between gap-2 rounded-md bg-gray-50 px-3 py-1.5 text-sm"
+          className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
         >
           <span>{render(entry)}</span>
           <button
@@ -441,7 +441,7 @@ function VerificationControl({
       <select
         value={orgId}
         onChange={(e) => setOrgId(e.target.value)}
-        className="rounded-md border border-gray-300 bg-white px-1.5 py-0.5 text-xs"
+        className="rounded-lg border border-line bg-white px-2 py-1 text-xs shadow-sm"
       >
         <option value="">{t("verification.chooseOrg")}</option>
         {relationships.map((r) => (
