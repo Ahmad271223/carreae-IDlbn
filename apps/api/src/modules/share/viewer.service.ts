@@ -188,6 +188,14 @@ export class ViewerService {
         name: profile ? `${profile.firstName} ${profile.lastName}` : "",
         headline: profile?.headline ?? undefined,
       },
+      // Provenance chrome only — nothing here is PII beyond what the
+      // applicant already authored into the package.
+      meta: {
+        applicationTitle: application.title,
+        sharedAt: pkg.createdAt.toISOString().slice(0, 10),
+        expiresAt: pkg.expiresAt?.toISOString().slice(0, 10) ?? null,
+        viewCount: pkg.viewCount + 1,
+      },
       sections: {},
       credentials: [],
       documents: [],

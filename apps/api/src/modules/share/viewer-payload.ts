@@ -41,8 +41,17 @@ export interface ViewerLetter {
   paragraphs: string[];
 }
 
+/** Non-PII provenance shown in the viewer chrome (title is applicant-authored). */
+export interface ViewerMeta {
+  applicationTitle: string;
+  sharedAt: string;
+  expiresAt: string | null;
+  viewCount: number;
+}
+
 export interface ViewerPayload {
   applicant: { name: string; headline?: string };
+  meta: ViewerMeta;
   sections: Partial<
     Record<"experience" | "education" | "languages" | "skills", ViewerEntry[]>
   >;
