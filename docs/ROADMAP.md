@@ -56,8 +56,12 @@ Cycle after **every** milestone: `BUILD → TYPECHECK → LINT → TEST → SECU
 - **4.5** ✅ Seed journey §67 as automated E2E. MVP DoD: backend criteria §60 all pass; open before launch review: web UI surfaces, account export/erase endpoints, §65 remaining infra items
 
 ## Phase 5 — Employers
-- **5.1** Employer accounts, application inbox, pipeline states, verification-check UI,
-  team invites; user-visible status controls
+- **5.1** ✅ Employer accounts (org type EMPLOYER since 4.1), in-app submissions:
+  submit hands the employer a dedicated share package + consent (§38) resolved through
+  the §65-tested projection; application inbox with pipeline states
+  (RECEIVED→IN_REVIEW→SHORTLISTED→INTERVIEW→OFFER→HIRED/REJECTED, applicant-only
+  WITHDRAWN), verification badges in the inbox view, role-gated per RBAC.md
+  (OWNER/ADMIN/RECRUITER); user-visible status + withdraw. Team invites since 4.3
 
 ## Phase 6 — AI depth & integrations
 - **6.1** Job matching (transparent rule-based scoring — no invented percentages)
