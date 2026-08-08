@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../../lib/api";
 import { useT } from "../../../../lib/i18n-client";
+import { UniversityPicker } from "../../../../components/university-picker";
 import {
   Button,
   Card,
@@ -220,20 +221,12 @@ export default function ProfilePage() {
           )}
           onRemove={(id) => removeEntry("/educations", id)}
           removeLabel={t("common.remove")}
-        />
-        <AddForm
-          fields={[
-            ["institutionName", t("career.institution")],
-            ["degreeType", t("career.degree")],
-            ["countryCode", t("profile.country")],
-            ["startDate", t("career.startDate")],
-            ["endDate", t("career.endDate")],
-          ]}
-          optional={["endDate"]}
-          addLabel={t("common.add")}
-          onAdd={(values) =>
-            addEntry("/educations", { ...values, endDate: values.endDate || undefined })
+          detail={(e) =>
+            [e.fieldOfStudy, e.grade].filter(Boolean).map(String).join(" · ")
           }
+        />
+        <AddEducationForm
+          onAdd={(values) => addEntry("/educations", values)}
         />
       </Card>
 
@@ -312,11 +305,14 @@ function EntryList({
   render,
   onRemove,
   removeLabel,
+  detail,
 }: {
   entries: Entry[];
   render: (entry: Entry) => React.ReactNode;
   onRemove: (id: string) => void;
   removeLabel: string;
+  /** Optional secondary line, e.g. field of study · grade. */
+  detail?: (entry: Entry) => string;
 }) {
   if (entries.length === 0) return null;
   return (
@@ -326,7 +322,12 @@ function EntryList({
           key={entry.id}
           className="flex items-center justify-between gap-2 rounded-xl border border-line bg-white px-4 py-3 text-sm transition-colors hover:border-brand-tint/40"
         >
-          <span>{render(entry)}</span>
+          <span>
+            {render(entry)}
+            {detail?.(entry) && (
+              <span className="mt-0.5 block text-xs text-muted">{detail(entry)}</span>
+            )}
+          </span>
           <button
             onClick={() => onRemove(entry.id)}
             className="text-xs text-gray-400 hover:text-red-600"
@@ -458,5 +459,124 @@ function VerificationControl({
         {t("verification.request")}
       </button>
     </span>
+  );
+}
+
+/**
+ * Education entry: institution comes from the searchable picker (which
+ * prefills the country), everything else the person writes themselves —
+ * field of study and grade are free text because grading systems differ
+ * per country and must not be forced into our vocabulary.
+ */
+function AddEducationForm({
+  onAdd,
+}: {
+  onAdd: (values: Record<string, unknown>) => void;
+}) {
+  const { t } = useT();
+  const [institutionName, setInstitutionName] = useState("");
+  const [countryCode, setCountryCode] = useState("");
+  const [degreeType, setDegreeType] = useState("");
+  const [fieldOfStudy, setFieldOfStudy] = useState("");
+  const [grade, setGrade] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [ongoing, setOngoing] = useState(false);
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    onAdd({
+      institutionName,
+      countryCode: countryCode.toUpperCase(),
+      degreeType,
+      fieldOfStudy: fieldOfStudy || undefined,
+      grade: grade || undefined,
+      startDate,
+      endDate: ongoing || !endDate ? undefined : endDate,
+    });
+    setInstitutionName("");
+    setCountryCode("");
+    setDegreeType("");
+    setFieldOfStudy("");
+    setGrade("");
+    setStartDate("");
+    setEndDate("");
+    setOngoing(false);
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <Field label={t("career.institution")}>
+          <UniversityPicker
+            value={institutionName}
+            onChange={setInstitutionName}
+            onCountryChange={setCountryCode}
+          />
+        </Field>
+      </div>
+      <Field label={t("career.degree")}>
+        <Input
+          value={degreeType}
+          onChange={(e) => setDegreeType(e.target.value)}
+          placeholder={t("career.degree.placeholder")}
+          required
+        />
+      </Field>
+      <Field label={t("career.fieldOfStudy")}>
+        <Input
+          value={fieldOfStudy}
+          onChange={(e) => setFieldOfStudy(e.target.value)}
+          placeholder={t("career.fieldOfStudy.placeholder")}
+        />
+      </Field>
+      <Field label={t("career.startDate")}>
+        <Input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          required
+        />
+      </Field>
+      <Field label={t("career.endDate")}>
+        <Input
+          type="date"
+          value={endDate}
+          disabled={ongoing}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </Field>
+      <Field label={t("career.grade")}>
+        <Input
+          value={grade}
+          onChange={(e) => setGrade(e.target.value)}
+          placeholder={t("career.grade.placeholder")}
+        />
+      </Field>
+      <div className="w-24">
+        <Field label={t("profile.country")}>
+          <Input
+            value={countryCode}
+            maxLength={2}
+            placeholder="LB"
+            onChange={(e) => setCountryCode(e.target.value.toUpperCase())}
+            required
+          />
+        </Field>
+      </div>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={ongoing}
+          onChange={(e) => setOngoing(e.target.checked)}
+        />
+        {t("career.ongoing")}
+      </label>
+      <div className="sm:col-span-2">
+        <Button type="submit" variant="secondary" disabled={!institutionName}>
+          {t("common.add")}
+        </Button>
+      </div>
+    </form>
   );
 }
