@@ -42,6 +42,17 @@ export class ViewerService {
     private readonly mailer: Mailer,
   ) {}
 
+  /** Usability rules shared by the token path and the org-inbox path. */
+  private assertUsable(pkg: SharePackage): void {
+    if (pkg.revokedAt) throw new NotFoundException({ code: "NOT_FOUND" });
+    if (pkg.expiresAt && pkg.expiresAt <= new Date()) {
+      throw new GoneException({ code: "GONE" });
+    }
+    if (pkg.viewLimit !== null && pkg.viewCount >= pkg.viewLimit) {
+      throw new GoneException({ code: "GONE" });
+    }
+  }
+
   /** Validates token + options; does NOT count a view yet. */
   private async resolvePackage(
     token: string,
@@ -50,19 +61,50 @@ export class ViewerService {
     const pkg = await this.prisma.sharePackage.findUnique({
       where: { tokenHash: sha256Hex(token) },
     });
-    if (!pkg || pkg.revokedAt) throw new NotFoundException({ code: "NOT_FOUND" });
-    if (pkg.expiresAt && pkg.expiresAt <= new Date()) {
-      throw new GoneException({ code: "GONE" });
-    }
-    if (pkg.viewLimit !== null && pkg.viewCount >= pkg.viewLimit) {
-      throw new GoneException({ code: "GONE" });
-    }
+    if (!pkg) throw new NotFoundException({ code: "NOT_FOUND" });
+    this.assertUsable(pkg);
     if (pkg.pinHash) {
       if (!pin || sha256Hex(pin) !== pkg.pinHash) {
         throw new UnauthorizedException({ code: "PIN_REQUIRED" });
       }
     }
     return pkg;
+  }
+
+  /**
+   * Org-inbox access (Phase 5.1): the SAME allow-list projection, but the
+   * package is resolved by the submissions service (no raw token exists for
+   * it anywhere). Revocation/expiry by the applicant still cuts access; the
+   * view is counted and logged with the org as hint.
+   */
+  async viewPackage(
+    pkg: SharePackage,
+    meta: { orgHint?: string },
+  ): Promise<ViewerPayload> {
+    this.assertUsable(pkg);
+    const payload = await this.buildPayload(pkg);
+    await this.prisma.sharePackage.update({
+      where: { id: pkg.id },
+      data: { viewCount: { increment: 1 } },
+    });
+    await this.prisma.shareAccessLog.create({
+      data: {
+        sharePackageId: pkg.id,
+        sectionsViewed: Object.keys(payload.sections),
+        orgHint: meta.orgHint ?? null,
+      },
+    });
+    await this.notifyOwner(pkg);
+    return payload;
+  }
+
+  /** Org-inbox document access — same gating as the token path. */
+  async documentUrlForPackage(
+    pkg: SharePackage,
+    documentId: string,
+  ): Promise<{ url: string }> {
+    this.assertUsable(pkg);
+    return this.presignAttachedDocument(pkg, documentId);
   }
 
   async view(
@@ -94,6 +136,13 @@ export class ViewerService {
     pin?: string,
   ): Promise<{ url: string }> {
     const pkg = await this.resolvePackage(token, pin);
+    return this.presignAttachedDocument(pkg, documentId);
+  }
+
+  private async presignAttachedDocument(
+    pkg: SharePackage,
+    documentId: string,
+  ): Promise<{ url: string }> {
     if (!pkg.downloadAllowed) {
       throw new ForbiddenException({ code: "DOWNLOAD_DISABLED" });
     }

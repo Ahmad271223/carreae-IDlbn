@@ -222,6 +222,7 @@ export default function ApplicationsPage() {
                 {editingApp === application.id && (
                   <ApplicationEditor key={application.id} applicationId={application.id} />
                 )}
+                <SubmissionsPanel applicationId={application.id} />
               </li>
             ))}
           </ul>
@@ -464,6 +465,118 @@ function ApplicationEditor({ applicationId }: { applicationId: string }) {
         <Button onClick={save}>{t("common.save")}</Button>
         {saved && <span className="text-sm text-verified">{t("letters.saved")}</span>}
       </div>
+      <ErrorText>{error}</ErrorText>
+    </div>
+  );
+}
+
+// ---------- Employer submissions (Phase 5.1, applicant side) ----------
+
+interface Employer {
+  id: string;
+  name: string;
+}
+interface Submission {
+  id: string;
+  status: string;
+  organizationName: string;
+  submittedAt: string;
+}
+
+function SubmissionsPanel({ applicationId }: { applicationId: string }) {
+  const { t } = useT();
+  const [employers, setEmployers] = useState<Employer[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [orgId, setOrgId] = useState("");
+  const [error, setError] = useState("");
+
+  const reload = useCallback(() => {
+    api<Submission[]>(`/applications/${applicationId}/submissions`)
+      .then(setSubmissions)
+      .catch(() => undefined);
+  }, [applicationId]);
+  useEffect(() => {
+    api<Employer[]>("/employers").then(setEmployers).catch(() => undefined);
+    reload();
+  }, [reload]);
+
+  async function submit() {
+    if (!orgId) return;
+    setError("");
+    try {
+      await api(`/applications/${applicationId}/submit`, {
+        method: "POST",
+        body: { organizationId: orgId },
+      });
+      setOrgId("");
+      reload();
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message === "ALREADY_SUBMITTED"
+          ? t("submit.already")
+          : t("common.error"),
+      );
+    }
+  }
+
+  async function withdraw(id: string) {
+    await api(`/submissions/${id}/withdraw`, { method: "POST" }).catch(
+      () => undefined,
+    );
+    reload();
+  }
+
+  if (employers.length === 0 && submissions.length === 0) return null;
+
+  return (
+    <div className="mt-3 border-t border-line pt-3">
+      {submissions.length > 0 && (
+        <ul className="mb-2 space-y-1">
+          {submissions.map((s) => (
+            <li key={s.id} className="flex items-center justify-between gap-2 text-sm">
+              <span>
+                {s.organizationName}
+                <span
+                  className={`ms-2 text-xs ${
+                    s.status === "WITHDRAWN" || s.status === "REJECTED"
+                      ? "text-gray-400"
+                      : "font-medium text-brand-tint"
+                  }`}
+                >
+                  {t(`submit.status.${s.status}`)}
+                </span>
+              </span>
+              {s.status !== "WITHDRAWN" && (
+                <button
+                  onClick={() => withdraw(s.id)}
+                  className="text-xs text-gray-400 hover:text-red-600"
+                >
+                  {t("submit.withdraw")}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {employers.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={orgId}
+            onChange={(e) => setOrgId(e.target.value)}
+            className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
+          >
+            <option value="">{t("submit.chooseEmployer")}</option>
+            {employers.map((employer) => (
+              <option key={employer.id} value={employer.id}>
+                {employer.name}
+              </option>
+            ))}
+          </select>
+          <Button variant="secondary" disabled={!orgId} onClick={submit}>
+            {t("submit.action")}
+          </Button>
+        </div>
+      )}
       <ErrorText>{error}</ErrorText>
     </div>
   );

@@ -723,3 +723,37 @@ export const AccountEraseSchema = z.object({
   confirm: z.boolean().optional(),
 });
 export type AccountEraseDto = z.infer<typeof AccountEraseSchema>;
+
+// ---------- Employer submissions (Phase 5.1) ----------
+
+export const SubmissionStatusSchema = z.enum([
+  "RECEIVED",
+  "IN_REVIEW",
+  "SHORTLISTED",
+  "INTERVIEW",
+  "OFFER",
+  "HIRED",
+  "REJECTED",
+  "WITHDRAWN",
+]);
+export type SubmissionStatus = z.infer<typeof SubmissionStatusSchema>;
+
+export const SubmitApplicationSchema = z.object({
+  organizationId: z.string().uuid(),
+});
+export type SubmitApplicationDto = z.infer<typeof SubmitApplicationSchema>;
+
+/** Employer-side pipeline update — WITHDRAWN belongs to the applicant. */
+export const SubmissionStatusUpdateSchema = z.object({
+  status: z.enum([
+    "RECEIVED",
+    "IN_REVIEW",
+    "SHORTLISTED",
+    "INTERVIEW",
+    "OFFER",
+    "HIRED",
+    "REJECTED",
+  ]),
+  note: z.string().trim().max(2000).nullable().optional(),
+});
+export type SubmissionStatusUpdateDto = z.infer<typeof SubmissionStatusUpdateSchema>;

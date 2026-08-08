@@ -417,6 +417,7 @@ model Organization {
   relationships        OrganizationRelationship[]
   verificationRequests VerificationRequest[]
   issuedCredentials    Credential[]               @relation("CredentialIssuer")
+  submissions          ApplicationSubmission[]
 
   @@map("organizations")
 }
@@ -679,11 +680,47 @@ model Application {
   updatedAt      DateTime          @updatedAt @map("updated_at")
   deletedAt      DateTime?         @map("deleted_at")
 
-  user  User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items ApplicationItem[]
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       ApplicationItem[]
+  submissions ApplicationSubmission[]
 
   @@index([userId])
   @@map("applications")
+}
+
+/// Pipeline states for an in-app submission (Phase 5.1, RBAC.md RECRUITER).
+/// WITHDRAWN is applicant-only; every other transition is the employer's.
+enum SubmissionStatus {
+  RECEIVED
+  IN_REVIEW
+  SHORTLISTED
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+  WITHDRAWN
+}
+
+/// An application handed to one employer org. Access rides on the share
+/// package (same §65-tested projection + revocation semantics); one
+/// submission per application × organization.
+model ApplicationSubmission {
+  id             String           @id @default(uuid(7))
+  applicationId  String           @map("application_id")
+  organizationId String           @map("organization_id")
+  sharePackageId String           @map("share_package_id")
+  status         SubmissionStatus @default(RECEIVED)
+  note           String?
+  submittedAt    DateTime         @default(now()) @map("submitted_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  application  Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sharePackage SharePackage @relation(fields: [sharePackageId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, organizationId])
+  @@index([organizationId, status, submittedAt])
+  @@map("application_submissions")
 }
 
 model ApplicationItem {
@@ -716,8 +753,9 @@ model SharePackage {
   revokedAt       DateTime? @map("revoked_at")
   createdAt       DateTime  @default(now()) @map("created_at")
 
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessLogs ShareAccessLog[]
+  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessLogs  ShareAccessLog[]
+  submissions ApplicationSubmission[]
 
   @@index([userId])
   @@map("share_packages")

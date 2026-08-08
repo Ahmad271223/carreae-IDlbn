@@ -20,6 +20,7 @@ const ORG_TYPES = [
 ] as const;
 const ISSUER_ROLES = new Set(["OWNER", "ADMIN", "ISSUER"]);
 const MANAGER_ROLES = new Set(["OWNER", "ADMIN"]);
+const INBOX_ROLES = new Set(["OWNER", "ADMIN", "RECRUITER"]);
 
 interface Organization {
   id: string;
@@ -105,6 +106,7 @@ function OrgDetail({ membership }: { membership: Membership }) {
   const orgId = org.id;
   const canIssue = ISSUER_ROLES.has(membership.role);
   const canManage = MANAGER_ROLES.has(membership.role);
+  const canRecruit = INBOX_ROLES.has(membership.role);
 
   return (
     <>
@@ -113,6 +115,7 @@ function OrgDetail({ membership }: { membership: Membership }) {
           {t(`org.type.${org.type}`)} · {t(`org.role.${membership.role}`)}
         </p>
       </Card>
+      {org.type === "EMPLOYER" && canRecruit && <Inbox orgId={orgId} />}
       <VerificationQueue orgId={orgId} canAct={canIssue} />
       <IssueCredential orgId={orgId} canIssue={canIssue} />
       <Relationships orgId={orgId} />
@@ -651,6 +654,250 @@ function RegisterOrg({ onDone }: { onDone: () => void }) {
       </form>
       <p className="mt-2 text-xs text-gray-500">{t("org.registerHint")}</p>
       <ErrorText>{error}</ErrorText>
+    </Card>
+  );
+}
+
+// ---------- Application inbox (Phase 5.1) ----------
+
+const PIPELINE = [
+  "RECEIVED",
+  "IN_REVIEW",
+  "SHORTLISTED",
+  "INTERVIEW",
+  "OFFER",
+  "HIRED",
+  "REJECTED",
+] as const;
+
+interface InboxRow {
+  id: string;
+  status: string;
+  note: string | null;
+  submittedAt: string;
+  applicationTitle: string;
+  applicationType: string;
+  applicantName: string;
+}
+interface ViewerEntry {
+  title: string;
+  subtitle?: string;
+  dateRange?: string;
+  description?: string;
+  badge?: { verifiedBy: string; verifiedAt: string };
+}
+interface ViewerPayload {
+  applicant: { name: string; headline?: string };
+  sections: Record<string, ViewerEntry[]>;
+  credentials: Array<{
+    credentialType: string;
+    issuer: string;
+    issuedAt: string;
+    status: string;
+  }>;
+  documents: Array<{ id: string; fileName: string; downloadable: boolean }>;
+  coverLetters: Array<{ title: string; paragraphs: string[] }>;
+}
+
+function Inbox({ orgId }: { orgId: string }) {
+  const { t } = useT();
+  const [rows, setRows] = useState<InboxRow[]>([]);
+  const [views, setViews] = useState<Record<string, ViewerPayload>>({});
+  const [open, setOpen] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  const reload = useCallback(() => {
+    api<InboxRow[]>(`/org/${orgId}/submissions`).then(setRows).catch(() => undefined);
+  }, [orgId]);
+  useEffect(reload, [reload]);
+
+  async function toggleView(id: string) {
+    if (open === id) {
+      setOpen(null);
+      return;
+    }
+    setOpen(id);
+    if (!views[id]) {
+      try {
+        const payload = await api<ViewerPayload>(
+          `/org/${orgId}/submissions/${id}/view`,
+        );
+        setViews((v) => ({ ...v, [id]: payload }));
+      } catch {
+        setError(t("inbox.gone"));
+        setOpen(null);
+      }
+    }
+  }
+
+  async function setStatus(id: string, status: string) {
+    setError("");
+    try {
+      await api(`/org/${orgId}/submissions/${id}/status`, {
+        method: "POST",
+        body: { status },
+      });
+      reload();
+    } catch (e) {
+      setError(
+        e instanceof Error && e.message === "WITHDRAWN"
+          ? t("inbox.withdrawn")
+          : t("common.error"),
+      );
+    }
+  }
+
+  async function openDocument(id: string, documentId: string) {
+    const { url } = await api<{ url: string }>(
+      `/org/${orgId}/submissions/${id}/documents/${documentId}`,
+    ).catch(() => ({ url: "" }));
+    if (url) window.open(url, "_blank", "noopener");
+  }
+
+  return (
+    <Card title={t("inbox.title")}>
+      <ErrorText>{error}</ErrorText>
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-500">{t("common.none")}</p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row) => {
+            const view = views[row.id];
+            return (
+              <li key={row.id} className="rounded-xl border border-line bg-white p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-sm">
+                    <span className="font-medium">{row.applicantName}</span>
+                    <span className="ms-2 text-muted">{row.applicationTitle}</span>
+                    <span className="ms-2 text-xs text-gray-400">
+                      {new Date(row.submittedAt).toLocaleDateString()}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    {row.status === "WITHDRAWN" ? (
+                      <span className="text-xs text-gray-400">
+                        {t("submit.status.WITHDRAWN")}
+                      </span>
+                    ) : (
+                      <select
+                        value={row.status}
+                        onChange={(e) => setStatus(row.id, e.target.value)}
+                        className="rounded-lg border border-line bg-white px-2 py-1 text-xs shadow-sm"
+                      >
+                        {PIPELINE.map((s) => (
+                          <option key={s} value={s}>
+                            {t(`submit.status.${s}`)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {row.status !== "WITHDRAWN" && (
+                      <Button variant="secondary" onClick={() => toggleView(row.id)}>
+                        {open === row.id ? t("inbox.hide") : t("inbox.view")}
+                      </Button>
+                    )}
+                  </span>
+                </div>
+
+                {open === row.id && view && (
+                  <div className="mt-3 space-y-3 border-t border-line pt-3 text-sm">
+                    <div>
+                      <p className="font-display text-base font-bold text-brand">
+                        {view.applicant.name}
+                      </p>
+                      {view.applicant.headline && (
+                        <p className="text-muted">{view.applicant.headline}</p>
+                      )}
+                    </div>
+                    {Object.entries(view.sections).map(([key, entries]) => (
+                      <div key={key}>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-tint">
+                          {t(`cv.section.${key}`)}
+                        </p>
+                        <ul className="space-y-1">
+                          {entries.map((entry, i) => (
+                            <li key={i}>
+                              {entry.title}
+                              {entry.subtitle && (
+                                <span className="text-muted"> — {entry.subtitle}</span>
+                              )}
+                              {entry.dateRange && (
+                                <span className="ms-2 text-xs text-gray-400">
+                                  {entry.dateRange}
+                                </span>
+                              )}{" "}
+                              {entry.badge && (
+                                <VerifiedBadge
+                                  label={t("verification.verifiedBy", {
+                                    org: entry.badge.verifiedBy,
+                                  })}
+                                />
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    {view.credentials.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-tint">
+                          {t("viewer.credentials")}
+                        </p>
+                        <ul className="space-y-1">
+                          {view.credentials.map((credential, i) => (
+                            <li key={i}>
+                              {t(`credentials.type.${credential.credentialType}`)} —{" "}
+                              {credential.issuer}
+                              <span className="ms-2 text-xs text-gray-400">
+                                {t(`credentials.status.${credential.status}`)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {view.documents.length > 0 && (
+                      <div>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-tint">
+                          {t("viewer.documents")}
+                        </p>
+                        <ul className="space-y-1">
+                          {view.documents.map((document) => (
+                            <li key={document.id}>
+                              {document.downloadable ? (
+                                <button
+                                  onClick={() => openDocument(row.id, document.id)}
+                                  className="text-brand underline"
+                                >
+                                  {document.fileName}
+                                </button>
+                              ) : (
+                                document.fileName
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {view.coverLetters.map((letter, i) => (
+                      <div key={i}>
+                        <p className="mb-1 text-xs font-bold uppercase tracking-wide text-brand-tint">
+                          {letter.title}
+                        </p>
+                        {letter.paragraphs.map((paragraph, j) => (
+                          <p key={j} className="mb-1 whitespace-pre-wrap text-ink/90">
+                            {paragraph}
+                          </p>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Card>
   );
 }

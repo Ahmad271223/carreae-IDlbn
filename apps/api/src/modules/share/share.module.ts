@@ -11,6 +11,6 @@ import { ViewerService } from "./viewer.service";
   imports: [AuditModule, AuthModule, MailModule, StorageModule],
   controllers: [ShareController, PublicShareController],
   providers: [ShareService, ViewerService],
-  exports: [ShareService],
+  exports: [ShareService, ViewerService],
 })
 export class ShareModule {}

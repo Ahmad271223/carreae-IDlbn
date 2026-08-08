@@ -20,6 +20,6 @@ import { OrganizationsService } from "./organizations.service";
     AdminController,
   ],
   providers: [OrganizationsService, OrgAccessGuard, AdminGuard],
-  exports: [OrganizationsService],
+  exports: [OrganizationsService, OrgAccessGuard],
 })
 export class OrganizationsModule {}

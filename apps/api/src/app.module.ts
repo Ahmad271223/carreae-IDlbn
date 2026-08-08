@@ -17,6 +17,7 @@ import { OrganizationsModule } from "./modules/organizations/organizations.modul
 import { NotificationsModule } from "./modules/notifications/notifications.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { AccountModule } from "./modules/account/account.module";
+import { SubmissionsModule } from "./modules/submissions/submissions.module";
 
 /**
  * Modular monolith root. Every domain from docs/ARCHITECTURE.md gets its own
@@ -54,6 +55,7 @@ import { AccountModule } from "./modules/account/account.module";
     OrganizationsModule,
     NotificationsModule,
     AccountModule,
+    SubmissionsModule,
   ],
 })
 export class AppModule {}
