@@ -2,7 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../../lib/api";
 import { useT } from "../../../../lib/i18n-client";
-import { UniversityPicker } from "../../../../components/university-picker";
+import {
+  EmployerPicker,
+  UniversityPicker,
+} from "../../../../components/university-picker";
 import {
   Button,
   Card,
@@ -241,24 +244,17 @@ export default function ProfilePage() {
           )}
           onRemove={(id) => removeEntry("/experiences", id)}
           removeLabel={t("common.remove")}
-        />
-        <AddForm
-          fields={[
-            ["companyName", t("career.company")],
-            ["position", t("career.position")],
-            ["startDate", t("career.startDate")],
-            ["endDate", t("career.endDate")],
-          ]}
-          optional={["endDate"]}
-          addLabel={t("common.add")}
-          onAdd={(values) =>
-            addEntry("/experiences", {
-              ...values,
-              employmentType: "FULL_TIME",
-              endDate: values.endDate || undefined,
-            })
+          detail={(e) =>
+            [
+              e.employmentType ? t(`career.type.${String(e.employmentType)}`) : "",
+              e.location,
+            ]
+              .filter(Boolean)
+              .map(String)
+              .join(" · ")
           }
         />
+        <AddExperienceForm onAdd={(values) => addEntry("/experiences", values)} />
       </Card>
 
       <Card title={t("career.languages")}>
@@ -574,6 +570,140 @@ function AddEducationForm({
       </label>
       <div className="sm:col-span-2">
         <Button type="submit" variant="secondary" disabled={!institutionName}>
+          {t("common.add")}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+const EMPLOYMENT_TYPES = [
+  "FULL_TIME",
+  "PART_TIME",
+  "INTERNSHIP",
+  "VOLUNTEER",
+  "FREELANCE",
+] as const;
+
+/**
+ * Work experience entry. The employer comes from the picker (verified
+ * organizations on the platform are suggested, because only those can later
+ * confirm the entry) or is typed freely; the employment type is explicit so
+ * internships and volunteering are first-class, not disguised full-time jobs.
+ */
+function AddExperienceForm({
+  onAdd,
+}: {
+  onAdd: (values: Record<string, unknown>) => void;
+}) {
+  const { t } = useT();
+  const [companyName, setCompanyName] = useState("");
+  const [position, setPosition] = useState("");
+  const [employmentType, setEmploymentType] = useState<string>("FULL_TIME");
+  const [location, setLocation] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [ongoing, setOngoing] = useState(false);
+  const [description, setDescription] = useState("");
+
+  function submit(event: React.FormEvent) {
+    event.preventDefault();
+    onAdd({
+      companyName,
+      position,
+      employmentType,
+      location: location || undefined,
+      startDate,
+      endDate: ongoing || !endDate ? undefined : endDate,
+      description: description || undefined,
+    });
+    setCompanyName("");
+    setPosition("");
+    setEmploymentType("FULL_TIME");
+    setLocation("");
+    setStartDate("");
+    setEndDate("");
+    setOngoing(false);
+    setDescription("");
+  }
+
+  return (
+    <form onSubmit={submit} className="grid gap-3 sm:grid-cols-2">
+      <div className="sm:col-span-2">
+        <Field label={t("career.company")}>
+          <EmployerPicker value={companyName} onChange={setCompanyName} />
+        </Field>
+      </div>
+      <Field label={t("career.position")}>
+        <Input
+          value={position}
+          onChange={(e) => setPosition(e.target.value)}
+          placeholder={t("career.position.placeholder")}
+          required
+        />
+      </Field>
+      <label className="block text-sm">
+        <span className="mb-1.5 block font-semibold text-ink/80">
+          {t("career.employmentType")}
+        </span>
+        <select
+          value={employmentType}
+          onChange={(e) => setEmploymentType(e.target.value)}
+          className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
+        >
+          {EMPLOYMENT_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {t(`career.type.${type}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <Field label={t("career.startDate")}>
+        <Input
+          type="date"
+          value={startDate}
+          onChange={(e) => setStartDate(e.target.value)}
+          required
+        />
+      </Field>
+      <Field label={t("career.endDate")}>
+        <Input
+          type="date"
+          value={endDate}
+          disabled={ongoing}
+          onChange={(e) => setEndDate(e.target.value)}
+        />
+      </Field>
+      <div className="sm:col-span-2">
+        <Field label={t("career.location")}>
+          <Input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder={t("career.location.placeholder")}
+          />
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
+        <Field label={t("career.description")}>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            rows={2}
+            placeholder={t("career.description.placeholder")}
+            className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-all focus:border-brand-tint focus:outline-none"
+          />
+        </Field>
+      </div>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={ongoing}
+          onChange={(e) => setOngoing(e.target.checked)}
+        />
+        {t("career.stillWorking")}
+      </label>
+      <div className="sm:col-span-2">
+        <Button type="submit" variant="secondary" disabled={!companyName}>
           {t("common.add")}
         </Button>
       </div>
