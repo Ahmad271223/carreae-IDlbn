@@ -757,3 +757,26 @@ export const SubmissionStatusUpdateSchema = z.object({
   note: z.string().trim().max(2000).nullable().optional(),
 });
 export type SubmissionStatusUpdateDto = z.infer<typeof SubmissionStatusUpdateSchema>;
+
+// ---------- Letter generation from a job posting (§27 one-shot flow) ----------
+
+export const PositionTypeSchema = z.enum(["JOB", "INTERNSHIP"]);
+export type PositionType = z.infer<typeof PositionTypeSchema>;
+
+/**
+ * The simplified flow: the applicant pastes a posting and gets a complete
+ * letter. Language/convention are detected from the posting unless pinned.
+ */
+export const LetterFromPostingSchema = z.object({
+  posting: z.string().trim().min(30).max(20000),
+  positionType: PositionTypeSchema,
+  language: z
+    .string()
+    .length(2)
+    .regex(/^[a-z]{2}$/)
+    .optional(),
+  layoutTemplate: LetterLayoutSchema.optional(),
+  /** When set, the posting is stored as that application's job description. */
+  applicationId: z.string().uuid().optional(),
+});
+export type LetterFromPostingDto = z.infer<typeof LetterFromPostingSchema>;

@@ -6,11 +6,33 @@ import {
   Post,
   UseGuards,
 } from "@nestjs/common";
-import { AiDraftRequestSchema, type AiDraftRequestDto } from "@careerid/shared";
+import {
+  AiDraftRequestSchema,
+  LetterFromPostingSchema,
+  type AiDraftRequestDto,
+  type LetterFromPostingDto,
+} from "@careerid/shared";
 import { ZodValidationPipe } from "../../common/zod-validation.pipe";
 import { CurrentAuth, SessionGuard } from "../auth/session.guard";
 import type { SessionContext } from "../auth/session.service";
 import { AiService } from "./ai.service";
+
+/** The one-shot entry point: a pasted posting in, a finished letter out. */
+@Controller("cover-letters")
+@UseGuards(SessionGuard)
+export class LetterGeneratorController {
+  constructor(private readonly ai: AiService) {}
+
+  @Post("from-posting")
+  @HttpCode(201)
+  fromPosting(
+    @CurrentAuth() auth: SessionContext,
+    @Body(new ZodValidationPipe(LetterFromPostingSchema))
+    dto: LetterFromPostingDto,
+  ) {
+    return this.ai.generateFromPosting(auth.user.id, dto);
+  }
+}
 
 @Controller("cover-letters/:letterId/blocks/:blockId")
 @UseGuards(SessionGuard)

@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../../lib/api";
+import { api, ApiError } from "../../../../lib/api";
 import { useT } from "../../../../lib/i18n-client";
 import { Button, Card, ErrorText, Field, Input } from "../../../../components/ui";
 
@@ -53,6 +53,7 @@ export default function LettersPage() {
   const [convention, setConvention] = useState<string>("EN");
   const [language, setLanguage] = useState<string>(locale === "ar" ? "en" : locale);
   const [selected, setSelected] = useState<string | null>(null);
+  const [manualOpen, setManualOpen] = useState(false);
   const [error, setError] = useState("");
 
   const reload = useCallback(() => {
@@ -85,59 +86,81 @@ export default function LettersPage() {
   return (
     <>
       <h1 className="text-3xl font-extrabold tracking-tight text-brand">{t("letters.title")}</h1>
-      <Card title={t("letters.create")}>
-        <form onSubmit={create} className="flex flex-wrap items-end gap-3">
-          <div className="min-w-48 flex-1">
-            <Field label={t("apps.appTitle")}>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
-            </Field>
-          </div>
-          <label className="text-sm">
-            <span className="mb-1.5 block font-semibold text-ink/80">
-              {t("letters.layout")}
-            </span>
-            <select
-              value={layoutTemplate}
-              onChange={(e) => setLayoutTemplate(e.target.value)}
-              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
-            >
-              {LAYOUTS.map((l) => (
-                <option key={l} value={l}>
-                  {t(`letters.layout.${l}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1.5 block font-semibold text-ink/80">
-              {t("letters.convention")}
-            </span>
-            <select
-              value={convention}
-              onChange={(e) => setConvention(e.target.value)}
-              className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
-            >
-              {CONVENTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {t(`letters.convention.${c}`)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div className="w-24">
-            <Field label={t("letters.language")}>
-              <Input
-                value={language}
-                maxLength={2}
-                placeholder="de"
-                onChange={(e) => setLanguage(e.target.value.toLowerCase())}
-              />
-            </Field>
-          </div>
-          <Button type="submit">{t("letters.create")}</Button>
-        </form>
-        <ErrorText>{error}</ErrorText>
-      </Card>
+
+      {/* Primary flow: paste the posting, get a finished letter. */}
+      <PostingComposer
+        onGenerated={(letterId) => {
+          reload();
+          setSelected(letterId);
+        }}
+      />
+
+      {/* Fallback for people who want to write everything themselves. */}
+      {manualOpen ? (
+        <Card title={t("letters.manualCreate")}>
+          <form onSubmit={create} className="flex flex-wrap items-end gap-3">
+            <div className="min-w-48 flex-1">
+              <Field label={t("apps.appTitle")}>
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} required />
+              </Field>
+            </div>
+            <label className="text-sm">
+              <span className="mb-1.5 block font-semibold text-ink/80">
+                {t("letters.layout")}
+              </span>
+              <select
+                value={layoutTemplate}
+                onChange={(e) => setLayoutTemplate(e.target.value)}
+                className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
+              >
+                {LAYOUTS.map((l) => (
+                  <option key={l} value={l}>
+                    {t(`letters.layout.${l}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              <span className="mb-1.5 block font-semibold text-ink/80">
+                {t("letters.convention")}
+              </span>
+              <select
+                value={convention}
+                onChange={(e) => setConvention(e.target.value)}
+                className="rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm shadow-sm transition-colors focus:border-brand-tint focus:outline-none"
+              >
+                {CONVENTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`letters.convention.${c}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="w-24">
+              <Field label={t("letters.language")}>
+                <Input
+                  value={language}
+                  maxLength={2}
+                  placeholder="de"
+                  onChange={(e) => setLanguage(e.target.value.toLowerCase())}
+                />
+              </Field>
+            </div>
+            <Button type="submit">{t("letters.create")}</Button>
+            <Button type="button" variant="secondary" onClick={() => setManualOpen(false)}>
+              {t("common.cancel")}
+            </Button>
+          </form>
+          <ErrorText>{error}</ErrorText>
+        </Card>
+      ) : (
+        <button
+          onClick={() => setManualOpen(true)}
+          className="self-start text-sm text-muted underline hover:text-brand"
+        >
+          {t("letters.manualHint")}
+        </button>
+      )}
 
       <Card title={t("letters.title")}>
         {letters.length === 0 ? (
@@ -391,6 +414,133 @@ function LetterEditor({ letterId }: { letterId: string }) {
         {saved && <span className="text-sm text-verified">{t("letters.saved")}</span>}
       </div>
       <ErrorText>{error}</ErrorText>
+    </Card>
+  );
+}
+
+// ---------- One-shot composer: posting in, finished letter out ----------
+
+interface PostingAnalysis {
+  position: string;
+  company: string | null;
+  language: string;
+  convention: string;
+}
+interface GeneratedLetter {
+  letter: Letter;
+  analysis: PostingAnalysis;
+  warnings: Warning[];
+  backTranslation?: { language: string; text: string; hintKey: string };
+}
+
+function PostingComposer({ onGenerated }: { onGenerated: (letterId: string) => void }) {
+  const { t } = useT();
+  const [posting, setPosting] = useState("");
+  const [positionType, setPositionType] = useState<"JOB" | "INTERNSHIP">("JOB");
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState<GeneratedLetter | null>(null);
+  const [error, setError] = useState("");
+
+  async function generate(event: React.FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    setResult(null);
+    try {
+      const generated = await api<GeneratedLetter>("/cover-letters/from-posting", {
+        method: "POST",
+        body: { posting, positionType },
+      });
+      setResult(generated);
+      setPosting("");
+      onGenerated(generated.letter.id);
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.status === 503
+          ? t("letters.aiUnavailable")
+          : t("common.error"),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card title={t("letters.fromPosting")}>
+      <form onSubmit={generate} className="space-y-3">
+        <p className="text-sm text-muted">{t("letters.fromPosting.hint")}</p>
+        <textarea
+          value={posting}
+          onChange={(e) => setPosting(e.target.value)}
+          rows={7}
+          required
+          minLength={30}
+          placeholder={t("letters.fromPosting.placeholder")}
+          className="w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-sm text-ink shadow-sm transition-all focus:border-brand-tint focus:outline-none"
+        />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex gap-1 rounded-xl bg-brand-soft p-1">
+            {(["JOB", "INTERNSHIP"] as const).map((type) => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setPositionType(type)}
+                className={`rounded-lg px-3.5 py-1.5 text-sm transition-colors ${
+                  positionType === type
+                    ? "bg-white font-semibold text-brand shadow-sm"
+                    : "text-muted hover:text-brand"
+                }`}
+              >
+                {t(`letters.positionType.${type}`)}
+              </button>
+            ))}
+          </div>
+          <Button type="submit" disabled={busy || posting.trim().length < 30}>
+            {busy ? t("letters.generating") : t("letters.generate")}
+          </Button>
+        </div>
+        <ErrorText>{error}</ErrorText>
+      </form>
+
+      {result && (
+        <div className="mt-4 space-y-3 border-t border-line pt-4">
+          <div className="rounded-xl border border-verified/20 bg-verified/5 p-4">
+            <p className="text-sm font-semibold text-verified">
+              {t("letters.generated")}
+            </p>
+            <p className="mt-1 text-sm text-ink/80">
+              {t("letters.detected", {
+                position: result.analysis.position,
+                company: result.analysis.company ?? "—",
+                language: result.analysis.language.toUpperCase(),
+              })}
+            </p>
+          </div>
+
+          {/* §29: unsupported claims are surfaced, never silently kept. */}
+          {result.warnings.length > 0 && (
+            <div className="rounded-xl border border-amber-200/60 bg-amber-50 p-4">
+              <p className="text-sm font-semibold text-amber-800">
+                {t("letters.checkThese")}
+              </p>
+              <ul className="mt-1 space-y-0.5 text-xs text-amber-800">
+                {result.warnings.map((w, i) => (
+                  <li key={i}>
+                    “{w.value}” — {t(w.labelKey)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.backTranslation && (
+            <div className="rounded-xl border border-amber-200/60 bg-amber-50 p-4 text-xs text-amber-800">
+              <p className="mb-1 font-semibold">{t(result.backTranslation.hintKey)}</p>
+              <p className="whitespace-pre-wrap italic">{result.backTranslation.text}</p>
+            </div>
+          )}
+        </div>
+      )}
     </Card>
   );
 }

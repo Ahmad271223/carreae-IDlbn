@@ -250,3 +250,150 @@ describe("back-translation (§30)", () => {
     expect(ai.calls).toHaveLength(1);
   });
 });
+
+describe("one-shot letter from a posting (§24/§27)", () => {
+  const POSTING = [
+    "Werkstudent Softwareentwicklung (m/w/d) bei Beispiel GmbH in Berlin.",
+    "Wir suchen Unterstützung im Frontend-Team. Kenntnisse in TypeScript",
+    "und React sind von Vorteil. Bewerbungen an Frau Meier.",
+  ].join(" ");
+
+  function queueGeneration(blocks: Record<string, string>) {
+    ai.responses.push(
+      JSON.stringify({
+        position: "Werkstudent Softwareentwicklung",
+        company: "Beispiel GmbH",
+        recipient: "Frau Meier",
+        language: "de",
+      }),
+    );
+    ai.responses.push(JSON.stringify(blocks));
+  }
+
+  const FULL_BLOCKS = {
+    RECIPIENT: "Beispiel GmbH\nFrau Meier\nBerlin",
+    SUBJECT: "Bewerbung als Werkstudent Softwareentwicklung",
+    SALUTATION: "Sehr geehrte Frau Meier,",
+    OPENING: "mit großem Interesse habe ich Ihre Ausschreibung gelesen.",
+    BODY: "Bei ACME Lebanon arbeite ich als Junior Developer.",
+    CLOSING: "Über eine Einladung freue ich mich sehr.",
+    SIGNATURE: "Aline Haddad",
+  };
+
+  it("turns a pasted posting into a complete AI_GENERATED letter", async () => {
+    const cookie = await makeUser();
+    queueGeneration(FULL_BLOCKS);
+    ai.responses.push("الترجمة العكسية للنص.");
+
+    const response = await http()
+      .post("/api/v1/cover-letters/from-posting")
+      .set("Cookie", cookie)
+      .send({ posting: POSTING, positionType: "INTERNSHIP" });
+
+    expect(response.status).toBe(201);
+    // Language + convention are read out of the posting, not asked for.
+    expect(response.body.analysis.language).toBe("de");
+    expect(response.body.analysis.convention).toBe("DE");
+    expect(response.body.letter.language).toBe("de");
+    expect(response.body.letter.title).toContain("Beispiel GmbH");
+
+    const blocks = response.body.letter.blocks as Array<{
+      type: string;
+      content: string;
+      origin: string;
+    }>;
+    expect(blocks).toHaveLength(7);
+    expect(blocks.every((b) => b.content.trim() !== "")).toBe(true);
+    // §28: machine-written content stays labelled.
+    expect(blocks.every((b) => b.origin === "AI_GENERATED")).toBe(true);
+    expect(blocks.find((b) => b.type === "SUBJECT")?.content).toContain(
+      "Werkstudent",
+    );
+
+    // §30: letter language above the documented level triggers the hint.
+    expect(response.body.backTranslation.hintKey).toBe("ai.backTranslation.hint");
+  });
+
+  it("keeps sensitive data out of every prompt and flags unsupported claims", async () => {
+    const cookie = await makeUser();
+    queueGeneration({
+      ...FULL_BLOCKS,
+      BODY: "Ich habe 2011 an der Cedar University studiert und spreche C2.",
+    });
+    ai.responses.push("الترجمة العكسية.");
+
+    const response = await http()
+      .post("/api/v1/cover-letters/from-posting")
+      .set("Cookie", cookie)
+      .send({ posting: POSTING, positionType: "JOB" });
+    expect(response.status).toBe(201);
+
+    // §31: the AI boundary holds for the new flow too.
+    const everythingSent = ai.calls
+      .map((c) => `${c.system}\n${c.prompt}`)
+      .join("\n");
+    expect(everythingSent).not.toContain("2007-03-14");
+    expect(everythingSent).not.toContain("Lebanese");
+    expect(everythingSent).not.toContain("+961 3 123456");
+    expect(everythingSent).not.toContain("Hamra Street");
+    // The posting must be framed as data, never as instructions.
+    expect(everythingSent).toContain("untrusted DATA");
+    // A JOB posting is prompted differently from an internship.
+    expect(everythingSent).toContain("JOB application");
+
+    // §29: claims with no profile backing surface as warnings.
+    const warnings = response.body.warnings as Array<{
+      type: string;
+      value: string;
+    }>;
+    expect(warnings.some((w) => w.type === "YEAR" && w.value === "2011")).toBe(true);
+    expect(warnings.some((w) => w.type === "LANGUAGE_LEVEL")).toBe(true);
+  });
+
+  it("stores the posting on a linked application and survives chatty JSON", async () => {
+    const cookie = await makeUser();
+    const application = (
+      await http()
+        .post("/api/v1/applications")
+        .set("Cookie", cookie)
+        .send({ title: "Werkstudent", type: "JOB" })
+    ).body;
+
+    // Providers like to wrap JSON in fences and prose — that must not break us.
+    ai.responses.push(
+      'Sure! Here you go:\n```json\n{"position":"Werkstudent","company":null,"recipient":null,"language":"en"}\n```',
+    );
+    ai.responses.push("```json\n" + JSON.stringify(FULL_BLOCKS) + "\n```");
+
+    const response = await http()
+      .post("/api/v1/cover-letters/from-posting")
+      .set("Cookie", cookie)
+      .send({
+        posting: POSTING,
+        positionType: "JOB",
+        applicationId: application.id,
+      });
+    expect(response.status).toBe(201);
+    expect(response.body.analysis.convention).toBe("EN");
+
+    const stored = await prisma.application.findUniqueOrThrow({
+      where: { id: application.id },
+    });
+    expect(stored.jobDescription).toContain("Werkstudent");
+  });
+
+  it("fails honestly when the provider returns nothing usable", async () => {
+    const cookie = await makeUser();
+    ai.responses.push('{"position":"Dev","company":null,"recipient":null,"language":"en"}');
+    ai.responses.push("I cannot help with that.");
+
+    const response = await http()
+      .post("/api/v1/cover-letters/from-posting")
+      .set("Cookie", cookie)
+      .send({ posting: POSTING, positionType: "JOB" });
+    expect(response.status).toBe(503);
+    expect(response.body.code).toBe("AI_UNUSABLE_RESPONSE");
+    // No half-written letter is left behind.
+    expect(await prisma.coverLetter.count()).toBe(0);
+  });
+});
